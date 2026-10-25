@@ -142,17 +142,24 @@ public enum LectorAsientos {
     /// "1.000,00 Proveedores (400)" → Debe 400 por 1.000. Sin código o sin importe, no hay apunte.
     static func apunte(en texto: String, lado: Lado) -> Apunte? {
         var resto = texto
-        guard let codigo = extraerCodigo(de: &resto),
-              let grupos = buscar(#"\d{1,3}(?:\s?\.\s?\d{3})+(?:\s?,\s?\d{1,2})?|\d+\s?,\s?\d{1,2}|\d+"#, en: resto)?.grupos,
-              let importe = Importe.leer(grupos[0].replacingOccurrences(of: " ", with: "")),
-              importe > 0 else { return nil }
+        if let codigo = extraerCodigoEntreParentesis(de: &resto) {
+            guard let grupos = buscar(#"\d{1,3}(?:\s?\.\s?\d{3})+(?:\s?,\s?\d{1,2})?|\d+\s?,\s?\d{1,2}|\d+"#, en: resto)?.grupos,
+                  let importe = Importe.leer(grupos[0].replacingOccurrences(of: " ", with: "")),
+                  importe > 0 else { return nil }
+            return Apunte(lado, codigo, importe)
+        }
+        // Sin paréntesis manda la posición, como en el formato de clase: el código va pegado al
+        // centro (último número en el Debe, primero en el Haber) y el importe, en el borde de fuera.
+        let numeros = trozosNumericos(texto)
+        guard numeros.count >= 2, let primero = numeros.first, let ultimo = numeros.last else { return nil }
+        let (codigo, textoImporte) = lado == .debe ? (ultimo, primero) : (primero, ultimo)
+        guard Cuenta(codigo) != nil, let importe = Importe.leer(textoImporte), importe > 0 else { return nil }
         return Apunte(lado, codigo, importe)
     }
 
-    /// Busca el código de cuenta: primero entre paréntesis «(400)»; si falta el de apertura,
-    /// con el de cierre «400)»; si no hay paréntesis, un número entero de 3 a 5 cifras cuando
-    /// en la fila también hay un importe con coma. Lo quita del texto para que no se lea como importe.
-    private static func extraerCodigo(de texto: inout String) -> String? {
+    /// Código entre paréntesis «(400)», o solo con el de cierre «400)» si el de apertura no se leyó.
+    /// Lo quita del texto para que no se lea como importe.
+    private static func extraerCodigoEntreParentesis(de texto: inout String) -> String? {
         let patrones = [
             #"[(\[{<]\s*(\d{3,}(?:\.\d+)?)\s*[)\]}>]?"#,
             #"(\d{3,}(?:\.\d+)?)\s*[)\]}>]"#,
@@ -163,13 +170,27 @@ public enum LectorAsientos {
                 return m.grupos[1]
             }
         }
-        if texto.contains(","),
-           let m = buscar(#"(?<![\d.,])(\d{3,5})(?![\d.,])"#, en: texto),
-           Cuenta(m.grupos[1]) != nil {
-            texto.removeSubrange(m.rango)
-            return m.grupos[1]
-        }
         return nil
+    }
+
+    /// Los números de la fila, en orden. Une los trozos que Vision separa («1.000,» «00»).
+    static func trozosNumericos(_ texto: String) -> [String] {
+        var trozos: [String] = []
+        var seguido = false
+        for palabra in texto.split(separator: " ").map(String.init) {
+            guard palabra.contains(where: { $0.isNumber }) || palabra == "," || palabra == "." else {
+                seguido = false
+                continue
+            }
+            if seguido, let anterior = trozos.last,
+               anterior.hasSuffix(",") || anterior.hasSuffix(".") || palabra.hasPrefix(",") || palabra.hasPrefix(".") {
+                trozos[trozos.count - 1] += palabra
+            } else {
+                trozos.append(palabra)
+            }
+            seguido = true
+        }
+        return trozos.map { $0.filter { "0123456789.,".contains($0) } }.filter { !$0.isEmpty }
     }
 
     /// Confusiones típicas de la letra a mano dentro de una palabra con cifras:

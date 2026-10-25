@@ -100,6 +100,27 @@ final class LectorAsientosTests: XCTestCase {
                        Apunte(.debe, "572", 1_210))
     }
 
+    /// Captura del iPad (25-10-2026, 19:59): sin paréntesis ni fecha. Vision leyó bien las cifras;
+    /// el código es el número pegado al centro y el importe, el del borde.
+    func testSinParentesisElCodigoEsElNumeroPegadoAlCentro() throws {
+        let palabras = [
+            PalabraLeida("1000,00", x: 0.05, y: 260),
+            PalabraLeida("572", x: 0.31, y: 255),
+            PalabraLeida("430", x: 0.64, y: 245),
+            PalabraLeida("1000", x: 0.93, y: 245),
+        ]
+        let leido = try XCTUnwrap(LectorAsientos.leer(palabras).first)
+        XCTAssertEqual(leido.apuntes, [Apunte(.debe, "572", 1_000), Apunte(.haber, "430", 1_000)])
+        XCTAssertEqual(leido.noEntendido, [])
+        XCTAssertNoThrow(try leido.asiento(empresa: "X", numero: 1).get())
+    }
+
+    func testImporteTroceadoSinParentesis() {
+        XCTAssertEqual(LectorAsientos.trozosNumericos("1.000, 00 Bancos 572"), ["1.000,00", "572"])
+        XCTAssertEqual(LectorAsientos.apunte(en: "430 Clientes 1.210, 00", lado: .haber),
+                       Apunte(.haber, "430", 1_210))
+    }
+
     func testSinFechaTodaviaTambienSeLee() {
         let palabras = [PalabraLeida("50,00", x: 0.07, y: 200), PalabraLeida("(570)", x: 0.36, y: 200)]
         let leidos = LectorAsientos.leer(palabras)
