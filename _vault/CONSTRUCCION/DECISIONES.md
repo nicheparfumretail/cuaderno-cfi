@@ -43,3 +43,10 @@
 - Formato (foto de Iulian): la **fecha en el centro abre cada asiento**; **mitad izquierda = Debe** («1.000,00 Proveedores (400)»); **mitad derecha = Haber** («(572) Bancos 1.000,00»); la «a» va en el centro. El código de cuenta va entre paréntesis; el nombre se ignora porque manda el código.
 - La lectura (posiciones → asientos) vive en el motor (`LectorAsientos`) y tiene tests; la app solo pasa la tinta por Vision.
 - Sin botón: la hoja se relee entera 1,2 s después del último trazo. Los asientos que cuadran forman el diario; lo que no se entiende sale en rojo y se corrige reescribiendo en la tinta.
+
+## ADR-009 · El código llega al iPad con un Atajo que descarga un zip, no con Working Copy (25-10-2026)
+- Sustituye la vía de ADR-004 (GitHub → Working Copy → Swift Playgrounds).
+- Contexto: abrir `CuadernoApp.swiftpm` desde la carpeta de Working Copy cuelga Swift Playgrounds («Se ha producido un error al mostrar los documentos»), incluso después de reinstalarlo. Al desactivar la ubicación de Working Copy en Archivos, Swift Playgrounds vuelve a funcionar.
+- Decisión: cuando el CI sale en verde en la rama de prueba, publica `CuadernoApp.zip` en la publicación fija `ultima`. Un Atajo del iPad lo descarga, lo descomprime y sustituye el proyecto en la carpeta Playgrounds. Se puede lanzar al abrir Swift Playgrounds (automatización).
+- Límite: el enlace solo funciona con el repositorio **público**. Si pasa a privado, el Atajo necesita una clave de GitHub de solo lectura, que se pega en el iPad y nunca en el repositorio.
+- La app de GitHub para iPad no sirve: no descarga repositorios a Archivos.

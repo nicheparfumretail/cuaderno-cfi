@@ -31,9 +31,11 @@ DECISIONES y NORMAS. **Contabilidad → el PGC y los apuntes de clase, nunca la 
   `AppleProductTypes` / `.iOSApplication`). **Nada de `.xcodeproj`.** Todo lo que uses tiene
   que funcionar dentro de Swift Playgrounds: sin build phases, sin scripts de compilación, sin
   Storyboards, sin dependencias que Playgrounds no resuelva.
-- El código llega al iPad así: GitHub → app **Working Copy** (pull) → Archivos → Swift
-  Playgrounds. Iulian no sube cambios desde el iPad. (iCloud para Windows no funciona en su PC;
-  no lo uses como vía.)
+- El código llega al iPad así (ADR-009): el CI, en verde, publica `CuadernoApp.zip` en la
+  publicación fija `ultima` → un **Atajo** del iPad lo descarga y sustituye el proyecto en la
+  carpeta Playgrounds. **No uses Working Copy**: abrir el proyecto desde su carpeta cuelga Swift
+  Playgrounds. Iulian no sube cambios desde el iPad. (iCloud para Windows no funciona en su PC.)
+  La rama que se publica está en el job `publicar` de `.github/workflows/ci.yml`.
 - **La única prueba real de la interfaz es Iulian con el Pencil.** Tú no puedes verla. Por eso
   la lógica tiene que vivir fuera de la interfaz y estar cubierta por tests.
 

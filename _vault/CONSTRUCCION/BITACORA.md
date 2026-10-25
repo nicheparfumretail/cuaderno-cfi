@@ -45,3 +45,8 @@
 - Iulian mandó una foto del formato que usa siempre (apuntes de Gema): fecha en el centro sobre la raya; Debe a la izquierda «importe · nombre · (nº)»; «a» en el centro; Haber a la derecha «(nº) · nombre · importe».
 - Rehecho (ADR-008): `LectorAsientos` en el motor, con tests construidos a partir de la foto; la app lee la hoja al dejar de escribir y enseña el diario en vivo a la derecha.
 - Pendiente: decidir la rama fija `ipad` + automatización de Atajos para que Working Copy actualice solo al abrir Swift Playgrounds.
+
+## 25-10-2026 (noche, 2) — Working Copy cuelga Swift Playgrounds
+- Swift Playgrounds daba «error al mostrar los documentos» incluso tras reinstalarlo y borrar sus datos. La causa era la ubicación de Working Copy en Archivos: desactivándola, vuelve a funcionar. Se descarta Working Copy (ADR-009).
+- Nueva vía: el CI publica `CuadernoApp.zip` en `releases/download/ultima/` y un Atajo lo instala en Playgrounds.
+- Lección: cuando una app de Apple falla al listar documentos, sospechar antes de las ubicaciones de terceros en Archivos (File Providers) que de la propia app.
