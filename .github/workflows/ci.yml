@@ -40,11 +40,30 @@ jobs:
       - name: Compilar para el simulador de iPad
         working-directory: CuadernoApp.swiftpm
         run: |
+          set -o pipefail
           xcodebuild build \
             -scheme "Cuaderno CFI" \
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/compilacion.log"
+      # Si no compila, los errores salen como una anotación del job. Las anotaciones se leen por la
+      # API pública de GitHub sin iniciar sesión, así que se pueden arreglar sin abrir el registro.
+      - name: Errores de compilación
+        if: failure()
+        run: |
+          python3 - "$RUNNER_TEMP/compilacion.log" <<'PY'
+          import re, sys
+          vistos = []
+          for linea in open(sys.argv[1], encoding="utf-8", errors="replace"):
+              m = re.search(r"([^/\s]+\.swift:\d+:\d+: error: .*)", linea)
+              if m and m.group(1).strip() not in vistos:
+                  vistos.append(m.group(1).strip())
+          if not vistos:
+              vistos = [l.strip() for l in open(sys.argv[1], encoding="utf-8", errors="replace") if "error" in l][-20:]
+          texto = "\n".join(vistos[:60]) or "Sin errores en el registro."
+          texto = texto.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+          print(f"::error title=Errores de compilación::{texto}")
+          PY
 
   # La versión para el iPad: si todo está en verde, se publica el zip de la app en un enlace fijo
   # (.../releases/download/ultima/CuadernoApp.zip) que descarga el Atajo del iPad (ADR-009).

@@ -143,7 +143,7 @@ struct EnunciadoView: View {
         defer { cargando = false }
         for proveedor in proveedores {
             guard let tipo = proveedor.registeredContentTypes.first(where: { $0.conforms(to: .pdf) || $0.conforms(to: .image) }),
-                  let datos = await datos(de: proveedor, tipo: tipo) else { continue }
+                  let datos = await leerDatos(de: proveedor, tipo: tipo) else { continue }
             let paginas = await ImportadorEnunciado.paginas(deDatos: datos, tipo: tipo)
             if paginas.isEmpty {
                 fallo = "Lo pegado no se puede leer como imagen."
@@ -153,7 +153,7 @@ struct EnunciadoView: View {
         }
     }
 
-    private func datos(de proveedor: NSItemProvider, tipo: UTType) async -> Data? {
+    private func leerDatos(de proveedor: NSItemProvider, tipo: UTType) async -> Data? {
         await withCheckedContinuation { continuacion in
             _ = proveedor.loadDataRepresentation(for: tipo) { datos, _ in
                 continuacion.resume(returning: datos)

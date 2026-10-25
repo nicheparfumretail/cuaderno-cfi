@@ -20,8 +20,8 @@ enum ImportadorEnunciado {
     static let anchoMaximo = 2000
 
     static var tipos: [UTType] {
-        [.pdf, .image] + ["org.openxmlformats.wordprocessingml.document", "com.microsoft.word.doc"]
-            .compactMap { UTType($0) }
+        let word = ["org.openxmlformats.wordprocessingml.document", "com.microsoft.word.doc"].compactMap { UTType($0) }
+        return [UTType.pdf, UTType.image] + word
     }
 
     enum Fallo: LocalizedError {
@@ -208,7 +208,8 @@ private final class ConversorWord: NSObject, WKNavigationDelegate {
         // Un momento para que acabe de maquetar.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             webView.createPDF { resultado in
-                self?.terminar(try? resultado.get())
+                let datos = try? resultado.get()
+                DispatchQueue.main.async { self?.terminar(datos) }
             }
         }
     }
