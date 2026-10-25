@@ -45,3 +45,27 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO
+
+  # La versión para el iPad: si todo está en verde, se publica el zip de la app en un enlace fijo
+  # (.../releases/download/ultima/CuadernoApp.zip) que descarga el Atajo del iPad (ADR-009).
+  publicar:
+    name: Publicar la versión para el iPad
+    runs-on: ubuntu-latest
+    needs: [motor, app]
+    if: github.ref_name == 'paso-0/prototipo'
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Empaquetar CuadernoApp.swiftpm
+        run: zip -qr CuadernoApp.zip CuadernoApp.swiftpm
+      - name: Sustituir la publicación «ultima»
+        run: |
+          gh release delete ultima --yes --cleanup-tag || true
+          gh release create ultima CuadernoApp.zip \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Última versión para el iPad" \
+            --notes "Rama ${GITHUB_REF_NAME} · commit ${GITHUB_SHA::7}. La descarga el Atajo del iPad."
