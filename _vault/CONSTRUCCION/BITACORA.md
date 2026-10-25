@@ -50,3 +50,8 @@
 - Swift Playgrounds daba «error al mostrar los documentos» incluso tras reinstalarlo y borrar sus datos. La causa era la ubicación de Working Copy en Archivos: desactivándola, vuelve a funcionar. Se descarta Working Copy (ADR-009).
 - Nueva vía: el CI publica `CuadernoApp.zip` en `releases/download/ultima/` y un Atajo lo instala en Playgrounds.
 - Lección: cuando una app de Apple falla al listar documentos, sospechar antes de las ubicaciones de terceros en Archivos (File Providers) que de la propia app.
+
+## 25-10-2026 (noche, 3) — Primera lectura buena de su letra y rediseño de la app
+- Captura de las 19:59: Vision leyó bien `1000,00 572 | 430 1000`. Fallaba la regla del Haber sin paréntesis; ahora la cuenta es el número pegado al centro (DEBUG-LOG).
+- Iulian pidió el rediseño completo (ADR-010): inicio con «+» y menú circular, histórico, apertura, panel plegable y redimensionable, zoom, zonas ajustables, rayas como separador, fecha a mano heredable, vista En limpio y recomendaciones sin bloquear.
+- Todo en `paso-0/prototipo`; el CI publica el zip para el iPad. Pendiente: que Iulian lo pruebe.

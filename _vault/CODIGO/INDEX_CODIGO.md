@@ -45,3 +45,16 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Asientos/HojaView.swift` | Diario en limpio de la hoja, en vivo, con cuadre y lo no leído en rojo |
 | `CuadernoApp.swiftpm/Lienzo/Reconocedor.swift` | Ahora solo convierte tinta en palabras con posición (Vision) |
 | ~~`Asientos/Borrador.swift`, `Asientos/EditorAsientoView.swift`~~ | Eliminados: ya no hay formulario |
+
+## Actualización 25-10-2026 (noche, 3) — ADR-010
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/DatosHoja.swift` | Zonas ajustables, fechas (a mano → leída → la del anterior), apertura con aviso y recomendaciones |
+| `Sources/CuadernoCore/LectorAsientos.swift` | Ahora también separa asientos por rayas (`esSeparador`) y lee con zonas a medida |
+| `Tests/CuadernoCoreTests/DatosHojaTests.swift` | Rayas, fechas heredadas, zonas, apertura (con la de Túria) y recomendaciones |
+| `CuadernoApp.swiftpm/App/Archivo.swift` | Hojas guardadas (una por archivo) |
+| `CuadernoApp.swiftpm/Inicio/` | Inicio con menú circular e histórico |
+| `CuadernoApp.swiftpm/Hoja/` | Hoja abierta: lectura en segundo plano, panel plegable, modo En limpio |
+| `CuadernoApp.swiftpm/Lienzo/` | Página de ancho fijo con zoom, cabecera con asas de las zonas, rayas fuera de Vision |
+| `CuadernoApp.swiftpm/Asientos/` | Panel de lo reconocido, vista En limpio, apuntes, mayor y balance |

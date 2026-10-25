@@ -50,3 +50,14 @@
 - Decisión: cuando el CI sale en verde en la rama de prueba, publica `CuadernoApp.zip` en la publicación fija `ultima`. Un Atajo del iPad lo descarga, lo descomprime y sustituye el proyecto en la carpeta Playgrounds. Se puede lanzar al abrir Swift Playgrounds (automatización).
 - Límite: el enlace solo funciona con el repositorio **público**. Si pasa a privado, el Atajo necesita una clave de GitHub de solo lectura, que se pega en el iPad y nunca en el repositorio.
 - La app de GitHub para iPad no sirve: no descarga repositorios a Archivos.
+
+## ADR-010 · Hojas guardadas, rayas que separan asientos y fecha elegida a mano (25-10-2026)
+- Pedido por Iulian tras la primera prueba con su letra (Vision leyó bien «1000,00 572 | 430 1000»).
+- **Inicio** sin nada cargado: botón «+» con un arco de opciones (Añadir asiento, Ver histórico), como la paleta del Pencil Pro. «Añadir asiento» pregunta si es el asiento de apertura.
+- **Cada hoja se guarda** aparte (`Documentos/hojas/<id>.json`: tinta, datos y lo último leído) y se reabre desde el histórico.
+- **Una raya horizontal** (trazo largo y plano) separa un asiento del siguiente. La fecha escrita también separa, pero ya no hace falta.
+- **La fecha la elige Iulian** en el panel (su letra para fechas no se lee bien). Si no la elige, se usa la leída y, si tampoco hay, **la del asiento anterior**.
+- **Página de ancho fijo** (1000 puntos) que la pantalla escala: la tinta no se descoloca al plegar el panel. Zoom hasta 1,8×. Las zonas Debe | centro | Haber se ensanchan con asas y se guardan en cada hoja.
+- **Nunca bloquea:** lo que no se entiende sale como recomendación («falta el Haber», «solo leo un número») y se puede seguir escribiendo.
+- **Apertura:** si el primer asiento lleva cuentas de los grupos 6 a 9, se avisa (la apertura solo reabre cuentas de balance). Es un aviso y no impide guardar el asiento.
+- Vista **«En limpio»**: la hoja con letra de apuntes, en el formato de clase.
