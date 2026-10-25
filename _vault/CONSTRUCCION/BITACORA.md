@@ -32,3 +32,9 @@
 - **CI** (`.github/workflows/ci.yml`): Linux pasa los tests del motor; macOS compila la app; un paso comprueba que la copia del motor en la app está al día.
 - **Sin verificar:** no hay compilador de Swift en el PC (ni WSL ni Docker). Nada está «hecho» hasta que el CI salga en verde (CLAUDE.md §6) y Iulian lo pruebe en el iPad.
 - Decisiones nuevas: ADR-005, ADR-006 y ADR-007.
+
+## 25-10-2026 (tarde) — Repositorio en GitHub y primer CI en verde
+- Creado `nicheparfumretail/cuaderno-cfi` (público) desde el Chrome de Iulian; subidos `main` (esqueleto) y `paso-0/prototipo`.
+- Primer CI (run 40205942121) en verde a la primera: tests del motor en Linux, copia del motor al día y compilación de la app en macOS. Queda resuelto el riesgo de que `AppleProductTypes` no compilase con `xcodebuild`.
+- Pendiente: pull request de `paso-0/prototipo` → `main`, y la primera prueba en el iPad ([PRUEBAS](../PRUEBAS/2026-10-25_primera_prueba_iPad.md)).
+- El conector de GitHub de Claude no conecta (su servidor no admite el registro de clientes) y `gh` no está instalado: la subida se hizo con git + Git Credential Manager.
