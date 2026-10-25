@@ -62,3 +62,8 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `Sources/CuadernoCore/LectorAsientos.swift` | Ahora lee varias candidatas por renglón y usa la partida doble para elegir (`cuadrar`, `seConfunden`, `cuentaSinImporte`) |
 | `CuadernoApp.swiftpm/Lienzo/Reconocedor.swift` | Ahora lee cada renglón aparte (dos imágenes, 5 candidatas) y guarda lo leído por renglón |
 | `Tests/CuadernoCoreTests/ReconocimientoTests.swift` | La captura de las 20:49 (814/819, «0,00 … (472)»), renglones de tinta torcidos, comas y puntos |
+| `Sources/CuadernoCore/FechaEscrita.swift` | La fecha del centro: día, mes y año con una o dos cifras; barras leídas como 1 o 7 |
+| `Sources/CuadernoCore/LectorAsientos+Cuadrar.swift` | La partida doble como prueba de la lectura (sacado de `LectorAsientos` para que no pase de 500 líneas) |
+| `Sources/CuadernoCore/Correccion.swift` | Apuntes corregidos o descartados a mano en el panel y cómo se aplican al resolver la hoja |
+| `CuadernoApp.swiftpm/Asientos/CorregirApunteView.swift` | Hoja «Corregir apunte»: lado, cuenta e importe con Scribble o teclado |
+| `Tests/CuadernoCoreTests/CorreccionesTests.swift` | Fechas de la captura de las 21:18 y correcciones (aplicar, sustituir, descartar, recuperar, hojas viejas) |

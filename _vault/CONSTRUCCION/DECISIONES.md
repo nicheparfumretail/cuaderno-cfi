@@ -67,3 +67,9 @@
 - Los renglones se deciden con la geometría de los trazos (`AgrupadorTrazos`, en el motor), no con las cajas de Vision. Cada renglón se lee aparte, dos veces y con varias candidatas, y la lectura se guarda por renglón.
 - Si un asiento no cuadra: la candidata de Vision que lo hace cuadrar se toma avisando; una cifra parecida que Vision no propuso solo se pregunta (puede ser un error real de Iulian, y eso no se tapa); a una fila con cuenta y sin importe se le dice cuánto falta.
 - Claude por API queda como capa opcional para lo que siga sin cuadrar, pendiente de que Iulian lo apruebe.
+
+## ADR-012 · Fechas de cualquier forma y correcciones a mano en el panel (25-10-2026)
+- Pedido por Iulian tras la captura de las 21:18 («01/10/25» se leyó «01/10125»).
+- **Fecha:** siempre día, mes y año, en ese orden. El día y el mes llevan una o dos cifras y el año dos o cuatro. Cualquier cosa que no sea cifra separa. Si faltan separadores, se prueba a tomar un 1 (o un 7) como barra; solo se acepta si sale **una única** fecha válida. Si no, se pide con el selector.
+- **Capa 2 del estudio de reconocimiento:** tocar un apunte o una fila sin entender abre «Corregir apunte» (lado, cuenta, importe; Scribble o teclado). Se puede descartar algo que no era un apunte y volver a lo leído.
+- La corrección se guarda en la hoja (`DatosHoja.correcciones`) junto a lo que se leyó y la tinta no se toca. Si se reescribe y se lee otra cosa, deja de aplicarse sola. Como las fechas a mano, va por la posición del asiento en la hoja.

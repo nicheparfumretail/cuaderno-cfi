@@ -60,3 +60,8 @@
 - Captura de las 20:49: «210,00 … (472)» leído como «0,00 HJA oportado (472)» y 819 leído como 814. Además, cualquier retoque movía toda la hoja.
 - Estudio en [ESTUDIO-RECONOCIMIENTO](ESTUDIO-RECONOCIMIENTO.md) y capa 1 hecha (ADR-011): renglones por la tinta, lectura por renglón con candidatas y memoria, y la partida doble como prueba.
 - Pendiente: que Iulian lo pruebe con su letra; decidir la capa 2 (corrección con Scribble) y la 3 (Claude por API).
+
+## 25-10-2026 (noche, 5) — Fechas y corrección a mano
+- Prueba de las 21:18: el asiento de anticipo (407 + 472 / 400) se leyó y cuadró; la fecha «01/10/25» llegó como «01/10125».
+- Hecho (ADR-012): lectura de fechas con una o dos cifras y barras leídas como 1 o 7, y capa 2 (corregir apuntes tocándolos en el panel).
+- Pendiente: que Iulian pruebe la corrección con Scribble y decidir la capa 3 (Claude por API).
