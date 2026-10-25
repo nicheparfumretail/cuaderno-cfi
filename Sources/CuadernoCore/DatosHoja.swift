@@ -89,6 +89,9 @@ public struct DatosHoja: Codable, Hashable, Sendable {
                 lista.append("En «\(fila)» no encuentro una cuenta válida (3 cifras o más, sin empezar por 0).")
             }
         }
+        for texto in leido.fechaIlegible {
+            lista.append("En el centro leo «\(texto)» y no es una fecha: elígela con el selector de fecha.")
+        }
         let hayDebe = leido.apuntes.contains { $0.lado == .debe }
         let hayHaber = leido.apuntes.contains { $0.lado == .haber }
         if hayDebe && !hayHaber {

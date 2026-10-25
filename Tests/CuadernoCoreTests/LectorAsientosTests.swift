@@ -128,4 +128,64 @@ final class LectorAsientosTests: XCTestCase {
         XCTAssertNil(leidos[0].fecha)
         XCTAssertEqual(leidos[0].apuntes, [Apunte(.debe, "570", 50)])
     }
+
+    /// Captura del iPad (25-10-2026, 20:33), asiento 2 de Túria: «Compras / mercaderías» en dos
+    /// renglones, con la (600) en el de arriba y el 4.900,00 en el de abajo.
+    func testNombreEnDosRenglonesEsUnSoloApunte() throws {
+        let palabras = [
+            PalabraLeida("20-01-25", x: 0.49, y: 705),
+            PalabraLeida("compros", x: 0.22, y: 700), PalabraLeida("(600)", x: 0.37, y: 705),
+            PalabraLeida("4.900,00", x: 0.08, y: 735), PalabraLeida("merraderics", x: 0.25, y: 735),
+            PalabraLeida("819,00", x: 0.08, y: 805), PalabraLeida("HP", x: 0.2, y: 800),
+            PalabraLeida("IVA", x: 0.25, y: 800), PalabraLeida("(472)", x: 0.38, y: 805),
+            PalabraLeida("soportado", x: 0.26, y: 835),
+            PalabraLeida("(407)", x: 0.61, y: 700), PalabraLeida("Anticipos", x: 0.75, y: 695),
+            PalabraLeida("1.000,00", x: 0.93, y: 700), PalabraLeida("proveedores", x: 0.79, y: 725),
+            PalabraLeida("(400)", x: 0.62, y: 805), PalabraLeida("Proveedores", x: 0.78, y: 800),
+            PalabraLeida("4.719,00", x: 0.93, y: 785),
+        ]
+        let leidos = LectorAsientos.leer(palabras, separadores: [670, 930])
+        XCTAssertEqual(leidos.count, 1)
+        let leido = try XCTUnwrap(leidos.first)
+        XCTAssertEqual(leido.fecha, Fecha(año: 2025, mes: 1, dia: 20))
+        XCTAssertEqual(Set(leido.apuntes), [Apunte(.debe, "600", 4_900), Apunte(.debe, "472", 819),
+                                            Apunte(.haber, "407", 1_000), Apunte(.haber, "400", 4_719)])
+        XCTAssertEqual(leido.noEntendido, [])
+        XCTAssertNoThrow(try leido.asiento(empresa: "X", numero: 2).get())
+    }
+
+    func testRenglonesSeparadosPorUnaRayaNoSeUnen() {
+        let palabras = [PalabraLeida("(600)", x: 0.37, y: 100), PalabraLeida("4.900,00", x: 0.08, y: 130)]
+        let leidos = LectorAsientos.leer(palabras, separadores: [115])
+        XCTAssertEqual(leidos.flatMap(\.apuntes), [])
+        XCTAssertEqual(leidos.count, 2)
+    }
+
+    /// Vision lee la barra «/» de la fecha escrita a mano como un 1.
+    func testFechaConBarrasLeidasComoUnos() {
+        XCTAssertEqual(LectorAsientos.fechaConBarrasLeidasComoUnos(en: "10101125"), Fecha(año: 2025, mes: 1, dia: 10))
+        XCTAssertEqual(LectorAsientos.fechaConBarrasLeidasComoUnos(en: "2511012025"), Fecha(año: 2025, mes: 10, dia: 25))
+        XCTAssertNil(LectorAsientos.fechaConBarrasLeidasComoUnos(en: "12345678"))
+        let palabras = [PalabraLeida("10l01l25", x: 0.5, y: 100),
+                        PalabraLeida("1000", x: 0.05, y: 200), PalabraLeida("572", x: 0.35, y: 200),
+                        PalabraLeida("430", x: 0.65, y: 200), PalabraLeida("1000", x: 0.95, y: 200)]
+        XCTAssertEqual(LectorAsientos.leer(palabras).first?.fecha, Fecha(año: 2025, mes: 1, dia: 10))
+    }
+
+    func testLoQueNoEsFechaEnElCentroSeRecomiendaElegirla() throws {
+        let palabras = [PalabraLeida("1O?2", x: 0.5, y: 100),
+                        PalabraLeida("1000", x: 0.05, y: 200), PalabraLeida("572", x: 0.35, y: 200)]
+        let leido = try XCTUnwrap(LectorAsientos.leer(palabras).first)
+        XCTAssertNil(leido.fecha)
+        XCTAssertEqual(leido.fechaIlegible, ["1O?2"])
+        XCTAssertTrue(DatosHoja.sugerencias(leido).contains(
+            "En el centro leo «1O?2» y no es una fecha: elígela con el selector de fecha."))
+    }
+
+    func testHojasGuardadasAntesSeSiguenLeyendo() throws {
+        let viejo = #"{"apuntes":[{"lado":"debe","cuenta":"572","importe":"10"}],"noEntendido":[]}"#
+        let leido = try JSONDecoder().decode(AsientoLeido.self, from: Data(viejo.utf8))
+        XCTAssertEqual(leido.apuntes, [Apunte(.debe, "572", 10)])
+        XCTAssertEqual(leido.fechaIlegible, [])
+    }
 }

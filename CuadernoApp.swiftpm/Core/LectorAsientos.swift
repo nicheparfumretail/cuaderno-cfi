@@ -22,11 +22,26 @@ public struct AsientoLeido: Hashable, Codable, Sendable {
     public var apuntes: [Apunte] = []
     /// Filas con números que no se han podido convertir en apunte; se enseñan para corregirlas.
     public var noEntendido: [String] = []
+    /// Lo escrito en el centro que no se ha podido leer como fecha (se elige a mano en el panel).
+    public var fechaIlegible: [String] = []
 
-    public init(fecha: Fecha? = nil, apuntes: [Apunte] = [], noEntendido: [String] = []) {
+    public init(fecha: Fecha? = nil, apuntes: [Apunte] = [], noEntendido: [String] = [],
+                fechaIlegible: [String] = []) {
         self.fecha = fecha
         self.apuntes = apuntes
         self.noEntendido = noEntendido
+        self.fechaIlegible = fechaIlegible
+    }
+
+    private enum CodingKeys: String, CodingKey { case fecha, apuntes, noEntendido, fechaIlegible }
+
+    /// Tolerante con hojas guardadas por versiones anteriores, que no tenían todos los campos.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(fecha: try c.decodeIfPresent(Fecha.self, forKey: .fecha),
+                  apuntes: try c.decodeIfPresent([Apunte].self, forKey: .apuntes) ?? [],
+                  noEntendido: try c.decodeIfPresent([String].self, forKey: .noEntendido) ?? [],
+                  fechaIlegible: try c.decodeIfPresent([String].self, forKey: .fechaIlegible) ?? [])
     }
 
     /// Sin apuntes ni filas por corregir: no hay asiento (una raya de más, una fecha suelta).
@@ -75,9 +90,14 @@ public enum LectorAsientos {
                             zonas: Zonas = Zonas()) -> [AsientoLeido] {
         var eventos: [(altura: Double, orden: Int, evento: Evento)] = []
         for zona in [Zona.debe, .centro, .haber] {
-            for grupo in agruparEnFilas(palabras.filter { self.zona(de: $0, zonas: zonas) == zona }) {
+            var grupos = agruparEnFilas(palabras.filter { self.zona(de: $0, zonas: zonas) == zona })
+            if zona != .centro {
+                grupos = unirRenglonesPartidos(grupos, lado: zona == .debe ? .debe : .haber, separadores: separadores)
+            }
+            for grupo in grupos {
                 let fila = Fila(zona: zona, palabras: grupo)
-                let fecha = zona == .centro ? self.fecha(en: numerico(fila.texto)) : nil
+                let leida = numerico(fila.texto)
+                let fecha = zona == .centro ? (self.fecha(en: leida) ?? fechaConBarrasLeidasComoUnos(en: leida)) : nil
                 // La fecha va en la raya, un poco por encima de sus apuntes: se adelanta un renglón
                 // para que abra su asiento antes que las filas que tiene a la misma altura.
                 let altura = fila.y - (fecha != nil ? fila.alto : 0)
@@ -114,8 +134,9 @@ public enum LectorAsientos {
                 actual.fecha = fecha
                 continue
             }
-            if fila.zona != .centro,
-               let nuevo = apunte(en: numerico(texto), lado: fila.zona == .debe ? .debe : .haber) {
+            if fila.zona == .centro {
+                actual.fechaIlegible.append(texto)
+            } else if let nuevo = apunte(en: numerico(texto), lado: fila.zona == .debe ? .debe : .haber) {
                 actual.apuntes.append(nuevo)
             } else {
                 actual.noEntendido.append(texto)
@@ -123,6 +144,41 @@ public enum LectorAsientos {
         }
         if !actual.vacio { asientos.append(enOrden(actual)) }
         return asientos
+    }
+
+    /// Un nombre largo («Compras de / mercaderías») ocupa dos renglones y la cuenta puede quedar en
+    /// uno y el importe en el otro. Dos renglones seguidos que solos no son un apunte y juntos sí,
+    /// son el mismo apunte, si están cerca y no hay una raya entre ellos. Los renglones sin cifras
+    /// (el resto del nombre) no cuentan.
+    private static func unirRenglonesPartidos(_ renglones: [[PalabraLeida]], lado: Lado,
+                                              separadores: [Double]) -> [[PalabraLeida]] {
+        let conCifras = renglones.filter { $0.contains { $0.texto.contains(where: { $0.isNumber }) } }
+        func esApunte(_ palabras: [PalabraLeida]) -> Bool {
+            let texto = palabras.sorted { $0.x < $1.x }.map(\.texto).joined(separator: " ")
+            return apunte(en: numerico(texto), lado: lado) != nil
+        }
+        func centro(_ palabras: [PalabraLeida]) -> Double {
+            palabras.map(\.y).reduce(0, +) / Double(palabras.count)
+        }
+        var resultado: [[PalabraLeida]] = []
+        var i = 0
+        while i < conCifras.count {
+            let arriba = conCifras[i]
+            if i + 1 < conCifras.count {
+                let abajo = conCifras[i + 1]
+                let (y1, y2) = (centro(arriba), centro(abajo))
+                let alto = (arriba + abajo).map(\.alto).max() ?? 0
+                let sinRaya = !separadores.contains { $0 > y1 && $0 < y2 }
+                if sinRaya, y2 - y1 < alto * 2.5, !esApunte(arriba), !esApunte(abajo), esApunte(arriba + abajo) {
+                    resultado.append(arriba + abajo)
+                    i += 2
+                    continue
+                }
+            }
+            resultado.append(arriba)
+            i += 1
+        }
+        return resultado
     }
 
     /// Una raya que separa asientos: un trazo largo (al menos una quinta parte de la página)
@@ -165,6 +221,17 @@ public enum LectorAsientos {
     static func fecha(en texto: String) -> Fecha? {
         guard let grupos = buscar(#"(\d{1,2})\s*[/\-.]\s*(\d{1,2})\s*[/\-.]\s*(\d{2,4})"#, en: texto)?.grupos,
               let dia = Int(grupos[1]), let mes = Int(grupos[2]), var año = Int(grupos[3]) else { return nil }
+        if año < 100 { año += 2000 }
+        return Fecha(año: año, mes: mes, dia: dia)
+    }
+
+    /// Vision suele leer la barra «/» escrita a mano como un 1: «10/01/25» llega como «10101125».
+    /// Con 8 o 10 cifras y un 1 justo donde irían las barras, se lee como fecha.
+    static func fechaConBarrasLeidasComoUnos(en texto: String) -> Fecha? {
+        let cifras = Array(texto.filter { ("0"..."9").contains($0) })
+        guard cifras.count == 8 || cifras.count == 10, cifras[2] == "1", cifras[5] == "1",
+              let dia = Int(String(cifras[0...1])), let mes = Int(String(cifras[3...4])),
+              var año = Int(String(cifras[6...])) else { return nil }
         if año < 100 { año += 2000 }
         return Fecha(año: año, mes: mes, dia: dia)
     }
