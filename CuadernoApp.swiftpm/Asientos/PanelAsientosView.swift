@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Panel lateral: lo reconocido de la hoja, en vivo. Cada asiento con su fecha (la eliges tú),
 /// sus apuntes, si cuadra y recomendaciones. Nunca bloquea: puedes seguir escribiendo.
-/// Lo mal leído se corrige donde está: se toca la cifra o la cuenta y se escribe encima.
+/// Un apunte se corrige tocándolo (mini ventana) y se arrastra por su asa a otro asiento.
 struct PanelAsientosView: View {
     @ObservedObject var editor: EditorHoja
     @State var cuentaMayor: CuentaSeleccionada? = nil
@@ -23,7 +23,7 @@ struct PanelAsientosView: View {
                 }
                 .padding(.vertical, 8)
             } else {
-                Text("Toca una cifra o una cuenta para corregirla escribiendo encima; mantén pulsado para más.")
+                Text("Toca un apunte para corregirlo. Arrástralo por ≡ a otro asiento: a la izquierda va al Debe y a la derecha al Haber.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -61,7 +61,7 @@ private struct AsientoPanel: View {
             }
 
             ForEach(resuelto.filasEditables) { fila in
-                ApunteEditable(fila: fila, estilo: .panel, acciones: acciones)
+                ApunteFila(fila: fila, estilo: .panel, acciones: acciones)
             }
             DescartadasView(cuantas: resuelto.descartadas, recuperar: recuperar)
 
@@ -73,6 +73,7 @@ private struct AsientoPanel: View {
             }
         }
         .padding(.vertical, 4)
+        .modifier(ZonaParaSoltar(asiento: resuelto.numero - 1, soltar: acciones.soltar))
     }
 }
 

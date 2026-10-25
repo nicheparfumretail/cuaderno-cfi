@@ -62,7 +62,18 @@ final class EditorHoja: ObservableObject {
         AccionesApunte(
             corregir: { [weak self] fila, apunte in self?.corregir(asiento: fila.asiento, leido: fila.leido, por: apunte) },
             volver: { [weak self] fila in self?.quitarCorreccion(asiento: fila.asiento, leido: fila.leido) },
-            verMayor: verMayor)
+            verMayor: verMayor,
+            soltar: { [weak self] texto, destino, lado in self?.soltar(texto, en: destino, lado: lado) ?? false })
+    }
+
+    /// Un apunte arrastrado desde su asiento a otro (o al otro lado del mismo).
+    func soltar(_ texto: String, en destino: Int, lado: Lado) -> Bool {
+        guard let arrastrado = try? JSONDecoder().decode(ApunteArrastrado.self, from: Data(texto.utf8)) else { return false }
+        var apunte = arrastrado.apunte
+        apunte.lado = lado
+        hoja.datos.mover(asiento: arrastrado.origen, leido: arrastrado.leido, apunte: apunte, a: destino)
+        guardar()
+        return true
     }
 
     /// Relee la hoja cuando se deja de escribir un momento; cada trazo nuevo reinicia la espera.

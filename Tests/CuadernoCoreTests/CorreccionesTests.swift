@@ -94,4 +94,62 @@ final class CorreccionesTests: XCTestCase {
         nuevo.corregir(asiento: 0, leido: .fila("x 472"), por: Apunte(.debe, "472", 210))
         XCTAssertEqual(try JSONDecoder().decode(DatosHoja.self, from: JSONEncoder().encode(nuevo)), nuevo)
     }
+
+    // MARK: - Arrastrar apuntes entre asientos
+
+    private let conDeMas = AsientoLeido(apuntes: [Apunte(.debe, "600", 1_000), Apunte(.haber, "400", 1_000),
+                                                  Apunte(.haber, "407", 500)])
+    private let alQueLeFalta = AsientoLeido(apuntes: [Apunte(.debe, "572", 500)])
+
+    func testArrastrarUnApunteAOtroAsiento() throws {
+        var datos = datos()
+        let anticipo = Correccion.Leido.apunte(Apunte(.haber, "407", 500))
+        datos.mover(asiento: 0, leido: anticipo, apunte: Apunte(.haber, "407", 500), a: 1)
+        var resueltos = datos.resolver([conDeMas, alQueLeFalta], empresa: "X")
+        XCTAssertEqual(resueltos[0].leido.apuntes, [Apunte(.debe, "600", 1_000), Apunte(.haber, "400", 1_000)])
+        XCTAssertEqual(resueltos[1].leido.apuntes, [Apunte(.debe, "572", 500), Apunte(.haber, "407", 500)])
+        XCTAssertNotNil(resueltos[0].asiento)
+        XCTAssertNotNil(resueltos[1].asiento)
+        XCTAssertEqual(resueltos[1].lineas.last?.origen, 0, "la corrección sigue guardada en el asiento donde se leyó")
+
+        // Corregir el apunte ya movido no lo devuelve a su sitio.
+        datos.corregir(asiento: 0, leido: anticipo, por: Apunte(.haber, "407", 600))
+        resueltos = datos.resolver([conDeMas, alQueLeFalta], empresa: "X")
+        XCTAssertEqual(resueltos[1].leido.apuntes.last, Apunte(.haber, "407", 600))
+
+        // Volver a lo leído lo devuelve al asiento de la tinta.
+        datos.quitarCorreccion(asiento: 0, leido: anticipo)
+        resueltos = datos.resolver([conDeMas, alQueLeFalta], empresa: "X")
+        XCTAssertEqual(resueltos[0].leido.apuntes.count, 3)
+        XCTAssertEqual(resueltos[1].leido.apuntes, [Apunte(.debe, "572", 500)])
+    }
+
+    func testArrastrarAlOtroLadoDelMismoAsiento() {
+        var datos = datos()
+        let anticipo = Correccion.Leido.apunte(Apunte(.haber, "407", 500))
+        datos.mover(asiento: 0, leido: anticipo, apunte: Apunte(.debe, "407", 500), a: 0)
+        XCTAssertNil(datos.correcciones.first?.destino)
+        XCTAssertEqual(datos.resolver([conDeMas], empresa: "X")[0].leido.apuntes.filter { $0.lado == .debe },
+                       [Apunte(.debe, "600", 1_000), Apunte(.debe, "407", 500)])
+    }
+
+    func testSiElAsientoDestinoDesapareceElApunteVuelveASuAsiento() {
+        var datos = datos()
+        let anticipo = Correccion.Leido.apunte(Apunte(.haber, "407", 500))
+        datos.mover(asiento: 0, leido: anticipo, apunte: Apunte(.haber, "407", 500), a: 1)
+        XCTAssertEqual(datos.resolver([conDeMas], empresa: "X")[0].leido.apuntes.count, 3)
+    }
+
+    // MARK: - Cuadro de cuentas
+
+    func testCuadroDeCuentas() {
+        XCTAssertEqual(PlanDeCuentas.nombre(de: "572"), "Bancos", "mandan los nombres de clase")
+        XCTAssertEqual(PlanDeCuentas.nombre(de: "625"), "Primas de seguros")
+        XCTAssertEqual(PlanDeCuentas.nombre(de: "2818"), "Amortización acumulada de elementos de transporte")
+        let codigos = PlanDeCuentas.todas.map { $0.codigo }
+        XCTAssertEqual(codigos, codigos.sorted())
+        XCTAssertEqual(Set(codigos).count, codigos.count)
+        XCTAssertTrue(PlanDeCuentas.buscar("mercaderias").map { $0.codigo }.contains("600"), "sin tildes")
+        XCTAssertEqual(PlanDeCuentas.buscar("477").map { $0.codigo }, ["477"])
+    }
 }

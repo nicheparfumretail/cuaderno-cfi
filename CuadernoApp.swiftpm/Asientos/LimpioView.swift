@@ -5,8 +5,9 @@ import SwiftUI
 ///     Debe ———————————— 01/12/2024 ———————————— Haber
 ///     1.000,00  Proveedores  (400)   a   (572)  Bancos  1.000,00
 ///
-/// También se corrige aquí: se toca una cifra o una cuenta y se escribe encima. Se guarda en el
-/// mismo sitio que desde el panel del lienzo, así que lo corregido sale en las dos vistas.
+/// También se corrige aquí: la fecha, cada apunte (tocándolo) y su sitio (arrastrándolo a otro
+/// asiento o al otro lado). Se guarda en el mismo sitio que desde el panel del lienzo, así que
+/// lo cambiado sale en las dos vistas.
 struct LimpioView: View {
     @ObservedObject var editor: EditorHoja
     @State private var cuentaMayor: CuentaSeleccionada? = nil
@@ -23,6 +24,7 @@ struct LimpioView: View {
                 }
                 ForEach(resueltos) { resuelto in
                     AsientoLimpio(resuelto: resuelto, acciones: acciones,
+                                  cambiarFecha: { editor.ponerFecha($0, asiento: resuelto.numero - 1) },
                                   recuperar: { editor.recuperarDescartadas(asiento: resuelto.numero - 1) })
                 }
             }
@@ -40,6 +42,7 @@ struct LimpioView: View {
 private struct AsientoLimpio: View {
     let resuelto: AsientoResuelto
     let acciones: AccionesApunte
+    let cambiarFecha: (Fecha) -> Void
     let recuperar: () -> Void
 
     var body: some View {
@@ -51,7 +54,11 @@ private struct AsientoLimpio: View {
                 Text("Debe").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
                 raya
                 VStack(spacing: 2) {
-                    Text(resuelto.fecha.description).font(.system(.body, design: .serif).weight(.semibold))
+                    DatePicker("Fecha", selection: Binding(get: { resuelto.fecha.date },
+                                                           set: { cambiarFecha(Fecha($0)) }),
+                               displayedComponents: .date)
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
                     if !resuelto.concepto.isEmpty {
                         Text(resuelto.concepto).font(.caption).foregroundStyle(.secondary)
                     }
@@ -74,6 +81,8 @@ private struct AsientoLimpio: View {
             pie
         }
         .font(.system(.body, design: .serif).monospacedDigit())
+        .padding(8)
+        .modifier(ZonaParaSoltar(asiento: resuelto.numero - 1, soltar: acciones.soltar))
     }
 
     private var raya: some View {
@@ -84,7 +93,7 @@ private struct AsientoLimpio: View {
     @ViewBuilder
     private func lado(_ fila: FilaEditable?, esDebe: Bool) -> some View {
         if let fila {
-            ApunteEditable(fila: fila, estilo: .limpio, acciones: acciones)
+            ApunteFila(fila: fila, estilo: .limpio, acciones: acciones)
                 .frame(maxWidth: .infinity)
         } else {
             Spacer().frame(maxWidth: .infinity)

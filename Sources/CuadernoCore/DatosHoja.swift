@@ -83,8 +83,8 @@ public struct DatosHoja: Codable, Hashable, Sendable {
     /// si no, la del asiento anterior («si sigo con el mismo día, el programa lo entiende»).
     public func resolver(_ leidos: [AsientoLeido], empresa: String) -> [AsientoResuelto] {
         var anterior = fechaInicial
-        return leidos.enumerated().map { indice, tinta in
-            let (leido, lineas, descartadas) = aplicandoCorrecciones(a: tinta, asiento: indice)
+        return aplicandoCorrecciones(a: leidos).enumerated().map { indice, corregido in
+            let (leido, lineas, descartadas) = corregido
             let manual = fechasManuales[indice]
             let fecha = manual ?? leido.fecha ?? anterior
             anterior = fecha

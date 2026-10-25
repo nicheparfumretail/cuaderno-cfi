@@ -1,7 +1,8 @@
 import Foundation
 
 /// Nombres de cuentas del PGC. Es una tabla de datos, no lógica: se amplía añadiendo filas.
-/// Por ahora contiene las cuentas que aparecen en el caso Túria, con los nombres de los apuntes.
+/// `cuentas` son las del caso Túria, con los nombres de los apuntes; el resto del cuadro de
+/// cuentas está en `pgc` (PlanDeCuentasPGC.swift).
 public enum PlanDeCuentas {
     public static let grupos: [Int: String] = [
         1: "Financiación básica",
@@ -69,7 +70,26 @@ public enum PlanDeCuentas {
         "769": "Otros ingresos financieros",
     ]
 
+    /// El nombre de los apuntes de clase y, si no está, el del cuadro de cuentas del PGC.
     public static func nombre(de codigo: String) -> String? {
-        cuentas[codigo]
+        cuentas[codigo] ?? pgc[codigo]
+    }
+
+    /// Todas las cuentas con nombre, en el orden del cuadro de cuentas (430 < 4310 < 437).
+    public static let todas: [(codigo: String, nombre: String)] =
+        pgc.merging(cuentas) { _, deClase in deClase }
+            .map { (codigo: $0.key, nombre: $0.value) }
+            .sorted { $0.codigo < $1.codigo }
+
+    /// Las cuentas cuyo código empieza por lo buscado o cuyo nombre lo contiene (sin tildes ni
+    /// mayúsculas): «mercad» → 300, 600, 700…; «47» → 470, 4700, 471…
+    public static func buscar(_ texto: String) -> [(codigo: String, nombre: String)] {
+        let buscado = normalizar(texto).trimmingCharacters(in: .whitespaces)
+        guard !buscado.isEmpty else { return todas }
+        return todas.filter { $0.codigo.hasPrefix(buscado) || normalizar($0.nombre).contains(buscado) }
+    }
+
+    private static func normalizar(_ texto: String) -> String {
+        texto.lowercased().folding(options: .diacriticInsensitive, locale: Locale(identifier: "es_ES"))
     }
 }
