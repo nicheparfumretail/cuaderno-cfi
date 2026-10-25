@@ -25,6 +25,10 @@ struct InicioView: View {
                                      abrirMenu(false)
                                      preguntarApertura = true
                                  },
+                                 OpcionMenu(titulo: "Practicar ejercicio", icono: "doc.text.image") {
+                                     abrirMenu(false)
+                                     ruta.append(archivo.crear(apertura: false, practica: true).id)
+                                 },
                                  OpcionMenu(titulo: "Ver histórico", icono: "clock.arrow.circlepath") {
                                      abrirMenu(false)
                                      ruta.append(Pantalla.historico)

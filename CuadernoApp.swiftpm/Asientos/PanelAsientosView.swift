@@ -2,40 +2,57 @@ import SwiftUI
 
 /// Panel lateral: lo reconocido de la hoja, en vivo. Cada asiento con su fecha (la eliges tú),
 /// sus apuntes, si cuadra y recomendaciones. Nunca bloquea: puedes seguir escribiendo.
-/// Un apunte se corrige tocándolo (mini ventana) y se arrastra por su asa a otro asiento.
+/// Un apunte se corrige tocándolo (mini ventana), manteniéndolo se abre la rueda y por su asa
+/// se arrastra a otro asiento.
 struct PanelAsientosView: View {
     @ObservedObject var editor: EditorHoja
-    @State var cuentaMayor: CuentaSeleccionada? = nil
+    @EnvironmentObject private var interaccion: InteraccionHoja
 
     var body: some View {
         let resueltos = editor.resueltos
-        let acciones = editor.acciones { cuentaMayor = CuentaSeleccionada(codigo: $0) }
-        List {
-            if resueltos.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Escribe el asiento en la hoja").font(.headline)
-                    Text("Debe a la izquierda y Haber a la derecha. La cuenta va pegada al centro y el importe en el borde:")
-                        .foregroundStyle(.secondary)
-                    Text("1000  572   a   430  1000")
-                        .font(.footnote.monospacedDigit())
-                    Text("Una raya por debajo cierra el asiento. Al dejar de escribir, aparece aquí.")
-                        .foregroundStyle(.secondary)
+        let acciones = editor.acciones(interaccion: interaccion)
+        ScrollViewReader { lector in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ayuda(vacia: resueltos.isEmpty)
+                        .padding(12)
+                    ForEach(resueltos) { resuelto in
+                        let resaltado = interaccion.resaltado == resuelto.numero
+                        AsientoPanel(resuelto: resuelto, acciones: acciones,
+                                     cambiarFecha: { editor.ponerFecha($0, asiento: resuelto.numero - 1) },
+                                     recuperar: { editor.recuperarDescartadas(asiento: resuelto.numero - 1) })
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.yellow.opacity(resaltado ? 0.4 : 0)))
+                            .animation(.easeInOut(duration: 0.3), value: resaltado)
+                            .id(resuelto.numero)
+                        Divider()
+                    }
                 }
-                .padding(.vertical, 8)
-            } else {
-                Text("Toca un apunte para corregirlo. Arrástralo por ≡ a otro asiento: a la izquierda va al Debe y a la derecha al Haber.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
-            ForEach(resueltos) { resuelto in
-                AsientoPanel(resuelto: resuelto, acciones: acciones,
-                             cambiarFecha: { editor.ponerFecha($0, asiento: resuelto.numero - 1) },
-                             recuperar: { editor.recuperarDescartadas(asiento: resuelto.numero - 1) })
+            .onChange(of: interaccion.salto) { _, salto in
+                guard let salto else { return }
+                withAnimation(.easeInOut(duration: 0.35)) { lector.scrollTo(salto.numero, anchor: .center) }
             }
         }
-        .listStyle(.plain)
-        .sheet(item: $cuentaMayor) { cuenta in
-            MayorView(mayor: Mayor(cuenta: cuenta.codigo, asientos: editor.asientos))
+    }
+
+    @ViewBuilder
+    private func ayuda(vacia: Bool) -> some View {
+        if vacia {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Escribe el asiento en la hoja").font(.headline)
+                Text("Debe a la izquierda y Haber a la derecha. La cuenta va pegada al centro y el importe en el borde:")
+                    .foregroundStyle(.secondary)
+                Text("1000  572   a   430  1000")
+                    .font(.footnote.monospacedDigit())
+                Text("Una raya por debajo cierra el asiento. Al dejar de escribir, aparece aquí.")
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text("Toca un apunte para corregirlo; mantenlo para la rueda. Arrástralo por ≡ a otro asiento: a la izquierda va al Debe y a la derecha al Haber.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 }
@@ -73,7 +90,7 @@ private struct AsientoPanel: View {
             }
         }
         .padding(.vertical, 4)
-        .modifier(ZonaParaSoltar(asiento: resuelto.numero - 1, soltar: acciones.soltar))
+        .modifier(ZonaParaSoltar(asiento: resuelto.numero - 1))
     }
 }
 

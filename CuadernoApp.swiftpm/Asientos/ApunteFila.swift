@@ -10,6 +10,8 @@ struct CuentaSeleccionada: Identifiable {
 struct FilaEditable: Identifiable, Hashable {
     /// El asiento donde se leyó (0 = el primero): ahí se guarda su corrección.
     let asiento: Int
+    /// El asiento donde se enseña ahora (distinto si se arrastró a otro).
+    let enAsiento: Int
     let leido: Correccion.Leido
     let lado: Lado
     let cuenta: String
@@ -23,33 +25,19 @@ struct FilaEditable: Identifiable, Hashable {
         if importe == nil, case .fila(let texto) = leido { return texto }
         return nil
     }
-
-    /// Lo que viaja al arrastrar el apunte a otro asiento (en JSON).
-    var arrastre: String? {
-        guard let apunte,
-              let datos = try? JSONEncoder().encode(ApunteArrastrado(origen: asiento, leido: leido, apunte: apunte))
-        else { return nil }
-        return String(decoding: datos, as: UTF8.self)
-    }
-}
-
-/// Un apunte en vuelo: de qué asiento y lectura sale y cuánto vale.
-struct ApunteArrastrado: Codable {
-    let origen: Int
-    let leido: Correccion.Leido
-    let apunte: Apunte
 }
 
 extension AsientoResuelto {
     var filasEditables: [FilaEditable] {
         var filas = lineas.map {
-            FilaEditable(asiento: $0.origen, leido: $0.leido, lado: $0.apunte.lado, cuenta: $0.apunte.cuenta,
-                         importe: $0.apunte.importe, corregida: $0.corregida)
+            FilaEditable(asiento: $0.origen, enAsiento: numero - 1, leido: $0.leido, lado: $0.apunte.lado,
+                         cuenta: $0.apunte.cuenta, importe: $0.apunte.importe, corregida: $0.corregida)
         }
         // Una fila sin entender va al lado al que le falta dinero, con la cuenta si se leyó.
         let falta = leido.apuntes.map(\.haber).reduce(0, +) - leido.apuntes.map(\.debe).reduce(0, +)
         for texto in leido.noEntendido {
-            filas.append(FilaEditable(asiento: numero - 1, leido: .fila(texto), lado: falta >= 0 ? .debe : .haber,
+            filas.append(FilaEditable(asiento: numero - 1, enAsiento: numero - 1, leido: .fila(texto),
+                                      lado: falta >= 0 ? .debe : .haber,
                                       cuenta: LectorAsientos.cuentaSinImporte(LectorAsientos.numerico(texto)) ?? "",
                                       importe: nil, corregida: false))
         }
@@ -62,52 +50,85 @@ extension AsientoResuelto {
 struct AccionesApunte {
     let corregir: (FilaEditable, Apunte?) -> Void
     let volver: (FilaEditable) -> Void
+    /// Abre el libro mayor de una cuenta.
     let verMayor: (String) -> Void
-    /// Un apunte arrastrado que se suelta en un asiento y un lado. Devuelve si se ha podido.
-    let soltar: (String, Int, Lado) -> Bool
+    /// Lleva un apunte (ya corregido) a otro asiento.
+    let mover: (FilaEditable, Apunte, Int) -> Void
+    /// Un apunte arrastrado que se suelta en un asiento (0 = el primero) y un lado.
+    let soltar: (FilaEditable, Int, Lado) -> Void
+    /// Los asientos de la hoja, para elegir a cuál va un apunte: (posición, «Nº 3 · 10/01/2025»).
+    let asientos: [(indice: Int, titulo: String)]
 }
 
-/// Un apunte en el panel o en En limpio. Tocándolo o manteniéndolo pulsado se abre la mini
-/// ventana para corregirlo; con el asa (≡) se arrastra a otro asiento o al otro lado.
+/// Un apunte en el panel o en En limpio. Tocándolo se abre la mini ventana para corregirlo;
+/// manteniéndolo pulsado, la rueda (modificar, libro mayor, cambiar de lado…). Por el asa (≡)
+/// se arrastra al momento a otro asiento o al otro lado.
 struct ApunteFila: View {
     enum Estilo { case panel, limpio }
 
     let fila: FilaEditable
     let estilo: Estilo
     let acciones: AccionesApunte
-
-    @State private var editando = false
+    @EnvironmentObject private var interaccion: InteraccionHoja
+    /// Verdadero mientras el dedo lleva el apunte; si el gesto se corta, se recoge la ficha.
+    @GestureState private var llevando = false
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        HStack(alignment: .center, spacing: 6) {
             asa
             contenido
-                .contentShape(Rectangle())
-                .onTapGesture { editando = true }
-                .onLongPressGesture(minimumDuration: 0.3) { editando = true }
-                .popover(isPresented: $editando) {
-                    EditorApunteMini(fila: fila, acciones: acciones) { editando = false }
+                .overlay {
+                    // Encima de todo el apunte, para saber dónde está al mantenerlo pulsado.
+                    GeometryReader { geo in
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { interaccion.editando = fila.id }
+                            .onLongPressGesture(minimumDuration: 0.35) {
+                                let marco = geo.frame(in: .global)
+                                interaccion.rueda = InteraccionHoja.Rueda(fila: fila, centro: CGPoint(x: marco.midX, y: marco.midY))
+                            }
+                    }
+                }
+                .popover(isPresented: Binding(get: { interaccion.editando == fila.id },
+                                              set: { if !$0, interaccion.editando == fila.id { interaccion.editando = nil } })) {
+                    EditorApunteMini(fila: fila, acciones: acciones) { interaccion.editando = nil }
                 }
         }
     }
 
-    /// El asa para arrastrar. Solo un apunte completo se puede llevar a otro sitio.
+    /// El asa para arrastrar, grande para cogerla bien con el dedo. Se coge y se mueve al
+    /// momento, sin mantenerla pulsada. Solo un apunte completo se puede llevar a otro sitio.
     @ViewBuilder
     private var asa: some View {
-        if let arrastre = fila.arrastre {
+        if fila.apunte != nil {
             Image(systemName: "line.3.horizontal")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .frame(width: 18)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(Color.secondary.opacity(llevando ? 0.3 : 0.12)))
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
-                .draggable(arrastre) {
-                    Text("\(fila.cuenta) · \(fila.importe.map(Importe.formatear) ?? "")")
-                        .padding(8)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .gesture(
+                    DragGesture(minimumDistance: 3, coordinateSpace: .named(InteraccionHoja.espacio))
+                        .updating($llevando) { _, llevando, _ in llevando = true }
+                        .onChanged { valor in interaccion.arrastre.mover(fila, a: valor.location) }
+                        .onEnded { valor in soltar(en: valor.location) }
+                )
+                .onChange(of: llevando) { _, sigue in
+                    if !sigue { interaccion.arrastre.terminar() }
                 }
+                .accessibilityLabel("Arrastrar el apunte a otro asiento")
         } else {
-            Color.clear.frame(width: 18, height: 1)
+            Color.clear.frame(width: 44, height: 44)
         }
+    }
+
+    /// Al soltar: si cae en un asiento, va a ese asiento y al lado de debajo del dedo.
+    private func soltar(en punto: CGPoint) {
+        let destino = interaccion.arrastre.destino(en: punto)
+        interaccion.arrastre.terminar()
+        guard let destino, destino.asiento != fila.enAsiento || destino.lado != fila.lado else { return }
+        acciones.soltar(fila, destino.asiento, destino.lado)
     }
 
     @ViewBuilder
@@ -163,30 +184,6 @@ struct ApunteFila: View {
     private var color: Color {
         if fila.sinEntender != nil { return .orange }
         return fila.corregida ? .blue : .primary
-    }
-}
-
-/// Un asiento donde se puede soltar un apunte arrastrado: en la mitad izquierda va al Debe y
-/// en la derecha al Haber.
-struct ZonaParaSoltar: ViewModifier {
-    let asiento: Int
-    let soltar: (String, Int, Lado) -> Bool
-
-    @State private var ancho: CGFloat = 0
-    @State private var encima = false
-
-    func body(content: Content) -> some View {
-        content
-            .background(GeometryReader { geo in
-                Color.clear
-                    .onAppear { ancho = geo.size.width }
-                    .onChange(of: geo.size.width) { ancho = geo.size.width }
-            })
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.accentColor.opacity(encima ? 0.15 : 0)))
-            .dropDestination(for: String.self) { textos, punto in
-                guard let texto = textos.first else { return false }
-                return soltar(texto, asiento, punto.x < ancho / 2 ? .debe : .haber)
-            } isTargeted: { encima = $0 }
     }
 }
 

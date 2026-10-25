@@ -19,6 +19,8 @@ public struct Mayor: Sendable {
         public let haber: Decimal
         /// Saldo de la cuenta después de este movimiento.
         public let saldo: Decimal
+        /// Las cuentas del otro lado del asiento: con qué se cargó o se abonó esta.
+        public let contrapartidas: [String]
     }
 
     public let cuenta: String
@@ -31,10 +33,14 @@ public struct Mayor: Sendable {
         for asiento in asientos {
             for (i, apunte) in asiento.apuntes.enumerated() where apunte.cuenta == cuenta {
                 saldo += apunte.debe - apunte.haber
+                var contrapartidas: [String] = []
+                for otro in asiento.apuntes where otro.lado != apunte.lado && !contrapartidas.contains(otro.cuenta) {
+                    contrapartidas.append(otro.cuenta)
+                }
                 lista.append(Movimiento(id: "\(asiento.id)-\(i)", numero: asiento.numero,
                                         fecha: asiento.fecha, concepto: asiento.concepto,
                                         detalle: apunte.detalle, debe: apunte.debe,
-                                        haber: apunte.haber, saldo: saldo))
+                                        haber: apunte.haber, saldo: saldo, contrapartidas: contrapartidas))
             }
         }
         movimientos = lista

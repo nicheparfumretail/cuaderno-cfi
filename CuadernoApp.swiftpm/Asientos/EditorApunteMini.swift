@@ -4,7 +4,7 @@ import SwiftUI
 /// (su nombre sale solo), el importe y ✓. Viene rellena con lo que se haya leído de la tinta.
 ///
 /// Si no se sabe el número, se toca el nombre: se escribe una parte («mercad», «47») o se elige
-/// del cuadro de cuentas del PGC.
+/// del cuadro de cuentas del PGC. El apunte también se puede llevar a otro asiento.
 struct EditorApunteMini: View {
     private enum Campo { case cuenta, importe, busqueda }
 
@@ -15,6 +15,7 @@ struct EditorApunteMini: View {
     @State private var lado: Lado
     @State private var cuenta: String
     @State private var importe: String
+    @State private var destino: Int
     @State private var buscando = false
     @State private var busqueda = ""
     @FocusState private var campo: Campo?
@@ -24,6 +25,7 @@ struct EditorApunteMini: View {
         self.acciones = acciones
         self.cerrar = cerrar
         _lado = State(initialValue: fila.lado)
+        _destino = State(initialValue: fila.enAsiento)
         _cuenta = State(initialValue: fila.cuenta)
         _importe = State(initialValue: (fila.importe ?? EditorApunteMini.importeSuelto(en: fila)).map(Importe.formatear) ?? "")
     }
@@ -46,11 +48,22 @@ struct EditorApunteMini: View {
                 .foregroundStyle(fila.sinEntender == nil ? Color.secondary : Color.orange)
                 .lineLimit(2)
 
-            Picker("Lado", selection: $lado) {
-                Text("Debe").tag(Lado.debe)
-                Text("Haber").tag(Lado.haber)
+            HStack(spacing: 12) {
+                Picker("Lado", selection: $lado) {
+                    Text("Debe").tag(Lado.debe)
+                    Text("Haber").tag(Lado.haber)
+                }
+                .pickerStyle(.segmented)
+                if acciones.asientos.count > 1 {
+                    Picker("Asiento", selection: $destino) {
+                        ForEach(acciones.asientos, id: \.indice) { opcion in
+                            Text(opcion.titulo).tag(opcion.indice)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
             }
-            .pickerStyle(.segmented)
 
             HStack(spacing: 10) {
                 TextField("Cuenta", text: $cuenta)
@@ -173,7 +186,11 @@ struct EditorApunteMini: View {
 
     private func aceptar() {
         guard let apunte else { return }
-        if apunte != fila.apunte { acciones.corregir(fila, apunte) }
+        if destino != fila.enAsiento {
+            acciones.mover(fila, apunte, destino)
+        } else if apunte != fila.apunte {
+            acciones.corregir(fila, apunte)
+        }
         cerrar()
     }
 

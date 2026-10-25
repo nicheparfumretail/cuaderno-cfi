@@ -9,7 +9,7 @@ struct HistoricoView: View {
         List {
             if archivo.hojas.isEmpty {
                 ContentUnavailableView("Todavía no hay hojas", systemImage: "book.closed",
-                                       description: Text("Vuelve al inicio y pulsa + → Añadir asiento."))
+                                       description: Text("Vuelve al inicio y pulsa + → Añadir asiento o Practicar ejercicio."))
             }
             ForEach(archivo.hojas) { hoja in
                 NavigationLink(value: hoja.id) {
@@ -41,16 +41,18 @@ private struct FilaHoja: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Hoja del \(Fecha(hoja.creada).description)").font(.headline)
-                if hoja.datos.esApertura {
-                    Text("Apertura")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                if hoja.practica {
+                    etiqueta("Práctica", color: .orange)
+                } else if hoja.datos.esApertura {
+                    etiqueta("Apertura", color: .accentColor)
                 }
             }
             Group {
-                if resueltos.isEmpty {
+                if hoja.practica {
+                    // Una práctica no dice aquí si cuadra: eso lo dice su «Solución».
+                    Text("\(resueltos.count) asiento\(resueltos.count == 1 ? "" : "s") · \(hoja.enunciado.count) pág. de enunciado")
+                        .foregroundStyle(.secondary)
+                } else if resueltos.isEmpty {
                     Text("Sin asientos todavía")
                 } else if descuadrados == 0 {
                     Text("\(resueltos.count) asientos · todos cuadran").foregroundStyle(.green)
@@ -61,5 +63,13 @@ private struct FilaHoja: View {
             .font(.subheadline)
         }
         .padding(.vertical, 4)
+    }
+
+    private func etiqueta(_ texto: String, color: Color) -> some View {
+        Text(texto)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(color.opacity(0.15)))
     }
 }

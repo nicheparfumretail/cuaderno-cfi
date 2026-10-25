@@ -34,14 +34,17 @@ final class CanvasPagina: PKCanvasView {
 struct LienzoView: UIViewRepresentable {
     @ObservedObject var editor: EditorHoja
     let vista: VistaLienzo
-    /// Falso mientras hay una hoja abierta encima; al volver, el lienzo recupera la paleta.
+    /// La paleta del Pencil de la hoja (la misma para las notas del enunciado en una práctica).
+    let paleta: PKToolPicker
+    /// Falso mientras hay algo abierto encima (una hoja, la mini ventana); al volver, el lienzo
+    /// recupera la paleta. Solo se le da al volver: así no le quita el teclado a la mini ventana.
     var activo: Bool
 
     /// Zoom máximo sobre el tamaño que encaja la página en pantalla: un poco, no mucho.
     static let zoomMaximo: CGFloat = 1.8
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(editor: editor, vista: vista)
+        Coordinator(editor: editor, vista: vista, paleta: paleta)
     }
 
     func makeUIView(context: Context) -> PKCanvasView {
@@ -56,30 +59,38 @@ struct LienzoView: UIViewRepresentable {
         canvas.alwaysBounceVertical = true
         canvas.contentInsetAdjustmentBehavior = .never
 
-        let paleta = context.coordinator.paleta
         paleta.setVisible(true, forFirstResponder: canvas)
         paleta.addObserver(canvas)
-        DispatchQueue.main.async { canvas.becomeFirstResponder() }
+        coordinador.activo = activo
+        if activo { DispatchQueue.main.async { canvas.becomeFirstResponder() } }
         return canvas
     }
 
     func updateUIView(_ canvas: PKCanvasView, context: Context) {
-        context.coordinator.encajar(canvas)
-        if activo && !canvas.isFirstResponder {
+        let coordinador = context.coordinator
+        coordinador.encajar(canvas)
+        if activo && !coordinador.activo && !canvas.isFirstResponder {
             DispatchQueue.main.async { canvas.becomeFirstResponder() }
         }
+        coordinador.activo = activo
+    }
+
+    static func dismantleUIView(_ canvas: PKCanvasView, coordinator: Coordinator) {
+        coordinator.paleta?.removeObserver(canvas)
     }
 
     @MainActor
     final class Coordinator: NSObject, PKCanvasViewDelegate {
         let editor: EditorHoja
         let vista: VistaLienzo
-        let paleta = PKToolPicker()
+        weak var paleta: PKToolPicker?
+        var activo = false
         private var anchoEncajado: CGFloat = 0
 
-        init(editor: EditorHoja, vista: VistaLienzo) {
+        init(editor: EditorHoja, vista: VistaLienzo, paleta: PKToolPicker) {
             self.editor = editor
             self.vista = vista
+            self.paleta = paleta
         }
 
         /// Cuando cambia el ancho en pantalla (panel plegado, giro), la página vuelve a encajar.
@@ -106,6 +117,11 @@ struct LienzoView: UIViewRepresentable {
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             editor.dibujoCambiado(canvasView.drawing)
             ajustarContenido(canvasView)
+        }
+
+        /// Al empezar a escribir aquí, la paleta del Pencil vuelve a este lienzo.
+        func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+            if !canvasView.isFirstResponder { canvasView.becomeFirstResponder() }
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {

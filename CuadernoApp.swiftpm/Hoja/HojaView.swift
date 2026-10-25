@@ -2,18 +2,26 @@ import SwiftUI
 
 /// Una hoja abierta. Arriba se elige la vista: el lienzo (tinta + panel de lo reconocido) o la
 /// hoja pasada a limpio. El panel se pliega y se redimensiona arrastrando la separación.
+///
+/// En una práctica, el panel es el enunciado (con notas encima) y se puede ensanchar o dejar a
+/// pantalla completa; la corrección no sale mientras se escribe, sino en «Solución».
 struct HojaView: View {
-    enum Modo: String, CaseIterable, Identifiable {
+    enum Modo: String, Identifiable {
         case lienzo = "Lienzo"
         case limpio = "En limpio"
+        case solucion = "Solución"
         var id: String { rawValue }
     }
 
     @StateObject private var editor: EditorHoja
     @StateObject private var vista = VistaLienzo()
+    @StateObject private var interaccion = InteraccionHoja()
     @State private var modo = Modo.lienzo
     @State private var panelVisible = true
-    @State private var anchoPanel: CGFloat = 340
+    /// En una práctica: el lienzo plegado y el enunciado a toda la pantalla.
+    @State private var lienzoPlegado = false
+    /// Ancho del panel elegido arrastrando la separación (nil: el de partida).
+    @State private var anchoPanel: CGFloat?
     @State private var anchoAlEmpezar: CGFloat?
     @State private var mostrarBalance = false
 
@@ -21,40 +29,86 @@ struct HojaView: View {
         _editor = StateObject(wrappedValue: EditorHoja(hoja: hoja, archivo: archivo))
     }
 
+    private var modos: [Modo] {
+        editor.esPractica ? [.lienzo, .limpio, .solucion] : [.lienzo, .limpio]
+    }
+
     var body: some View {
         Group {
             switch modo {
             case .lienzo: lienzo
-            case .limpio: LimpioView(editor: editor)
+            case .limpio: LimpioView(editor: editor, uso: editor.esPractica ? .practica : .diario)
+            case .solucion: LimpioView(editor: editor, uso: .solucion)
             }
         }
+        .overlay { ArrastreView(arrastre: interaccion.arrastre) }
+        .coordinateSpace(name: InteraccionHoja.espacio)
+        .overlay {
+            if let rueda = interaccion.rueda {
+                RuedaApunteView(rueda: rueda, acciones: editor.acciones(interaccion: interaccion), interaccion: interaccion)
+            }
+        }
+        .environmentObject(interaccion)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { barra }
         .sheet(isPresented: $mostrarBalance) {
             BalanceView(balance: BalanceComprobacion(asientos: editor.asientos))
         }
+        .sheet(item: $interaccion.cuentaMayor) { cuenta in
+            MayorView(mayor: Mayor(cuenta: cuenta.codigo, asientos: editor.asientos),
+                      sinCuadrar: editor.esPractica ? 0 : editor.resueltos.filter { $0.asiento == nil && !$0.leido.apuntes.isEmpty }.count,
+                      irAAsiento: irA)
+        }
         .onAppear { editor.programarLectura(espera: 0) }
         .onDisappear { editor.cerrar() }
     }
 
+    // MARK: - Lienzo
+
     private var lienzo: some View {
         GeometryReader { geo in
+            let practica = editor.esPractica
+            let soloPanel = practica && lienzoPlegado && panelVisible
+            let ancho = soloPanel ? geo.size.width : anchoDelPanel(total: geo.size.width)
             HStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    CabeceraZonas(vista: vista, zonas: editor.hoja.datos.zonas) { editor.cambiarZonas($0) }
-                    ZStack {
-                        PlantillaView(vista: vista, zonas: editor.hoja.datos.zonas)
-                        LienzoView(editor: editor, vista: vista, activo: !mostrarBalance)
+                if !soloPanel {
+                    VStack(spacing: 0) {
+                        CabeceraZonas(vista: vista, zonas: editor.hoja.datos.zonas) { editor.cambiarZonas($0) }
+                        ZStack {
+                            PlantillaView(vista: vista, zonas: editor.hoja.datos.zonas)
+                            LienzoView(editor: editor, vista: vista, paleta: interaccion.paleta, activo: lienzoActivo)
+                        }
                     }
                 }
                 if panelVisible {
-                    separador(anchoTotal: geo.size.width)
-                    PanelAsientosView(editor: editor)
-                        .frame(width: anchoPanel)
-                        .transition(.move(edge: .trailing))
+                    if !soloPanel {
+                        separador(anchoTotal: geo.size.width)
+                    }
+                    Group {
+                        if practica {
+                            EnunciadoView(editor: editor)
+                        } else {
+                            PanelAsientosView(editor: editor)
+                        }
+                    }
+                    .frame(width: ancho)
+                    .transition(.move(edge: .trailing))
                 }
             }
         }
+    }
+
+    /// El panel parte de 340 puntos (en una práctica, de casi la mitad: el enunciado se tiene
+    /// que leer) y se puede ensanchar hasta el 60 % (el 85 % en una práctica).
+    private func anchoDelPanel(total: CGFloat) -> CGFloat {
+        let maximo = total * (editor.esPractica ? 0.85 : 0.6)
+        let elegido = anchoPanel ?? (editor.esPractica ? total * 0.45 : 340)
+        return min(max(elegido, 240), maximo)
+    }
+
+    /// El lienzo tiene la paleta del Pencil salvo que haya algo abierto encima.
+    private var lienzoActivo: Bool {
+        !mostrarBalance && interaccion.cuentaMayor == nil && interaccion.editando == nil
     }
 
     /// Separación arrastrable entre la hoja y el panel.
@@ -69,39 +123,89 @@ struct HojaView: View {
         .gesture(
             DragGesture()
                 .onChanged { arrastre in
-                    let inicial = anchoAlEmpezar ?? anchoPanel
+                    let inicial = anchoAlEmpezar ?? anchoDelPanel(total: anchoTotal)
                     anchoAlEmpezar = inicial
-                    anchoPanel = min(max(inicial - arrastre.translation.width, 240), anchoTotal * 0.6)
+                    anchoPanel = inicial - arrastre.translation.width
                 }
-                .onEnded { _ in anchoAlEmpezar = nil }
+                .onEnded { _ in
+                    anchoPanel = anchoDelPanel(total: anchoTotal)
+                    anchoAlEmpezar = nil
+                }
         )
         .accessibilityLabel("Cambiar el ancho del panel")
     }
+
+    // MARK: - Saltos
+
+    /// Del mayor a un asiento: se enseña donde se ven los asientos y se resalta en amarillo.
+    private func irA(_ numero: Int) {
+        if editor.esPractica {
+            if modo == .lienzo { modo = .limpio }
+        } else if modo == .lienzo && !panelVisible {
+            withAnimation(.easeInOut(duration: 0.25)) { panelVisible = true }
+        }
+        // Cuando la hoja del mayor ya se ha ido y la vista está puesta.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            interaccion.saltar(a: numero)
+        }
+    }
+
+    // MARK: - Barra
 
     @ToolbarContentBuilder
     private var barra: some ToolbarContent {
         ToolbarItem(placement: .principal) {
             Picker("Vista", selection: $modo) {
-                ForEach(Modo.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(modos) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
-            .frame(width: 240)
+            .frame(width: editor.esPractica ? 330 : 240)
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
             if editor.leyendo {
                 ProgressView()
             }
             if modo == .lienzo {
+                if editor.esPractica && panelVisible {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) { lienzoPlegado.toggle() }
+                    } label: {
+                        Label(lienzoPlegado ? "Volver al lienzo" : "Enunciado a pantalla completa",
+                              systemImage: lienzoPlegado ? "rectangle.split.2x1" : "arrow.up.left.and.arrow.down.right")
+                    }
+                }
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { panelVisible.toggle() }
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        panelVisible.toggle()
+                        if !panelVisible { lienzoPlegado = false }
+                    }
                 } label: {
                     Label(panelVisible ? "Ocultar panel" : "Mostrar panel", systemImage: "sidebar.right")
                 }
+            } else {
+                ShareLink(item: editor.pdf(solucion: modo == .solucion),
+                          preview: SharePreview(modo == .solucion ? "Solución en PDF" : "En limpio en PDF")) {
+                    Label("Exportar en PDF", systemImage: "square.and.arrow.up")
+                }
             }
             Menu {
-                Button("Balance de comprobación") { mostrarBalance = true }
+                if !editor.esPractica {
+                    Button {
+                        mostrarBalance = true
+                    } label: {
+                        Label("Balance de comprobación", systemImage: "scalemass")
+                    }
+                }
+                ShareLink(item: editor.pdf(solucion: false), preview: SharePreview("En limpio en PDF")) {
+                    Label("Exportar en limpio (PDF)", systemImage: "doc.richtext")
+                }
+                if editor.esPractica {
+                    ShareLink(item: editor.pdf(solucion: true), preview: SharePreview("Solución en PDF")) {
+                        Label("Exportar la solución (PDF)", systemImage: "checkmark.seal")
+                    }
+                }
                 ShareLink(item: editor.exportable, preview: SharePreview("diario.json")) {
-                    Label("Exportar diario (JSON)", systemImage: "square.and.arrow.up")
+                    Label("Exportar diario (JSON)", systemImage: "curlybraces")
                 }
             } label: {
                 Label("Más", systemImage: "ellipsis.circle")
