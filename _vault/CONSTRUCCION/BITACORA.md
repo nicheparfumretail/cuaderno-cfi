@@ -70,3 +70,8 @@
 - Prueba de las 22:48: la hoja de corregir era incómoda y abría con «Debe» en un apunte del Haber. «(600)» se leyó «(608)» y «819» se leyó «89» al cerrar el paréntesis de la (472).
 - Hecho (ADR-013): corrección en línea en el panel y en En limpio, lectura por trozos y el nombre escrito como prueba del código.
 - Pendiente: que Iulian lo pruebe; decidir la capa 3 (Claude por API).
+
+## 25-10-2026 (noche, 7) — Mini ventana, arrastrar apuntes y PGC
+- Prueba de las 23:11: la edición en línea funcionaba pero era incómoda.
+- Hecho (ADR-014): mini ventana de corrección con el cuadro de cuentas del PGC, apuntes que se arrastran entre asientos y lados, y fecha editable en En limpio. CI en verde.
+- Pendiente: que Iulian lo pruebe y revise los nombres del cuadro de cuentas; decidir la capa 3 (Claude por API).

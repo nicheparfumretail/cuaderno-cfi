@@ -70,3 +70,8 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `Sources/CuadernoCore/NombreCuenta.swift` | El nombre escrito como prueba del código: palabras del PGC, parecido entre palabras y códigos a una cifra parecida |
 | `Sources/CuadernoCore/AgrupadorTrazos.swift` | Ahora también corta cada renglón en trozos por los huecos |
 | `CuadernoApp.swiftpm/Asientos/ApunteEditable.swift` | El apunte corregible en línea (cifra y cuenta como campos, menú al mantener pulsado), igual en el panel y en En limpio. Sustituye a `ApuntesView` y `CorregirApunteView` |
+| `Sources/CuadernoCore/PlanDeCuentasPGC.swift` | Cuadro de cuentas del PGC (grupos 1 a 7, de tres cifras, y algunas de cuatro) para elegir una cuenta por su nombre; generado con un script que comprueba que no haya códigos repetidos |
+| `Sources/CuadernoCore/Correccion.swift` | Ahora también mueve apuntes de un asiento a otro (`mover`, `destino`) |
+| `CuadernoApp.swiftpm/Asientos/ApunteFila.swift` | El apunte en el panel y en En limpio: se toca para corregirlo y se arrastra por su asa; zona para soltar por asiento (izquierda Debe, derecha Haber). Sustituye a `ApunteEditable` |
+| `CuadernoApp.swiftpm/Asientos/EditorApunteMini.swift` | Mini ventana: lado, cuenta con su nombre, buscador del cuadro de cuentas, importe y ✓ |
+| `Tests/CuadernoCoreTests/CorreccionesTests.swift` | Ahora también: arrastrar a otro asiento y al otro lado, destino que desaparece y cuadro de cuentas |

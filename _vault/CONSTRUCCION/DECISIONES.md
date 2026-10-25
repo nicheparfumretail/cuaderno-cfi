@@ -81,3 +81,10 @@
 - **Bidireccional:** el panel del lienzo y En limpio usan el mismo componente y guardan en `DatosHoja.correcciones`. Lo corregido en una vista sale en la otra.
 - **Lectura por trozos:** cada renglón se corta por sus huecos (importe, nombre, código) y cada trozo se lee aparte. Un número suelto se lee mejor solo («819 … (472)» salía «89»).
 - **El nombre confirma el código:** si el nombre escrito encaja mejor con otra cuenta del PGC a una cifra parecida del código leído, se toma esa y se avisa («leo la 608, pero pone mercaderías: tomo la 600»).
+
+## ADR-014 · Mini ventana para corregir, arrastrar apuntes entre asientos y cuadro de cuentas completo (25-10-2026)
+- Pedido por Iulian a las 23:11. Corregir escribiendo en los propios campos le resultaba incómodo, sobre todo cuando el reconocimiento dudaba.
+- **Mini ventana** al tocar o mantener pulsado un apunte (sustituye la edición en línea de ADR-013). Lleva: Debe/Haber, número de cuenta (el nombre sale solo), importe y ✓. Viene rellena con lo leído, también en una fila sin entender (la cuenta y el primer número que puede ser importe). Si no se sabe el número, se toca el nombre: se escribe una parte del nombre o del número, o se elige del cuadro de cuentas. Abajo: mayor, volver a lo leído y descartar.
+- **Arrastrar:** cada apunte tiene un asa (≡). Se suelta en cualquier asiento: en la mitad izquierda va al Debe y en la derecha al Haber. Funciona en el panel y en En limpio. Se guarda como corrección con `destino` en el asiento donde se leyó: «volver a lo leído» lo devuelve a su sitio. Si el asiento destino desaparece, vuelve al suyo.
+- **Cuadro de cuentas del PGC** (`PlanDeCuentasPGC.swift`): las cuentas de tres cifras de los grupos 1 a 7, más las de cuatro cifras de IVA y amortización acumulada. Los nombres de los apuntes de clase mandan cuando hay los dos. Los nombres se han escrito de memoria: si alguno no coincide con el PGC oficial o con los apuntes de Gema, se corrige la fila.
+- **Fecha editable también en En limpio**, con el mismo selector que el panel.
