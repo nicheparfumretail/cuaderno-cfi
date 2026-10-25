@@ -73,3 +73,11 @@
 - **Fecha:** siempre día, mes y año, en ese orden. El día y el mes llevan una o dos cifras y el año dos o cuatro. Cualquier cosa que no sea cifra separa. Si faltan separadores, se prueba a tomar un 1 (o un 7) como barra; solo se acepta si sale **una única** fecha válida. Si no, se pide con el selector.
 - **Capa 2 del estudio de reconocimiento:** tocar un apunte o una fila sin entender abre «Corregir apunte» (lado, cuenta, importe; Scribble o teclado). Se puede descartar algo que no era un apunte y volver a lo leído.
 - La corrección se guarda en la hoja (`DatosHoja.correcciones`) junto a lo que se leyó y la tinta no se toca. Si se reescribe y se lee otra cosa, deja de aplicarse sola. Como las fechas a mano, va por la posición del asiento en la hoja.
+
+## ADR-013 · Corregir en línea, en el panel y en En limpio; el nombre escrito confirma la cuenta (25-10-2026)
+- Sustituye la hoja «Corregir apunte» de ADR-012. A Iulian le resultaba incómoda, y además abría con el lado equivocado.
+- **Corregir donde está:** la cifra y la cuenta de cada apunte son campos. Se tocan y se escribe encima con el Pencil (el texto queda seleccionado, así que lo nuevo lo sustituye). Al salir del campo se guarda. Si lo escrito no es una cuenta o un importe válidos, vuelve lo que había.
+- Manteniendo pulsado: pasar al otro lado, ver el mayor, volver a lo leído o descartar. Las filas sin entender son editables en naranja.
+- **Bidireccional:** el panel del lienzo y En limpio usan el mismo componente y guardan en `DatosHoja.correcciones`. Lo corregido en una vista sale en la otra.
+- **Lectura por trozos:** cada renglón se corta por sus huecos (importe, nombre, código) y cada trozo se lee aparte. Un número suelto se lee mejor solo («819 … (472)» salía «89»).
+- **El nombre confirma el código:** si el nombre escrito encaja mejor con otra cuenta del PGC a una cifra parecida del código leído, se toma esa y se avisa («leo la 608, pero pone mercaderías: tomo la 600»).

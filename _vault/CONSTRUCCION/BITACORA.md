@@ -65,3 +65,8 @@
 - Prueba de las 21:18: el asiento de anticipo (407 + 472 / 400) se leyó y cuadró; la fecha «01/10/25» llegó como «01/10125».
 - Hecho (ADR-012): lectura de fechas con una o dos cifras y barras leídas como 1 o 7, y capa 2 (corregir apuntes tocándolos en el panel).
 - Pendiente: que Iulian pruebe la corrección con Scribble y decidir la capa 3 (Claude por API).
+
+## 25-10-2026 (noche, 6) — Corrección en línea
+- Prueba de las 22:48: la hoja de corregir era incómoda y abría con «Debe» en un apunte del Haber. «(600)» se leyó «(608)» y «819» se leyó «89» al cerrar el paréntesis de la (472).
+- Hecho (ADR-013): corrección en línea en el panel y en En limpio, lectura por trozos y el nombre escrito como prueba del código.
+- Pendiente: que Iulian lo pruebe; decidir la capa 3 (Claude por API).

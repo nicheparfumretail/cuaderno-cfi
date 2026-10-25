@@ -67,3 +67,6 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `Sources/CuadernoCore/Correccion.swift` | Apuntes corregidos o descartados a mano en el panel y cómo se aplican al resolver la hoja |
 | `CuadernoApp.swiftpm/Asientos/CorregirApunteView.swift` | Hoja «Corregir apunte»: lado, cuenta e importe con Scribble o teclado |
 | `Tests/CuadernoCoreTests/CorreccionesTests.swift` | Fechas de la captura de las 21:18 y correcciones (aplicar, sustituir, descartar, recuperar, hojas viejas) |
+| `Sources/CuadernoCore/NombreCuenta.swift` | El nombre escrito como prueba del código: palabras del PGC, parecido entre palabras y códigos a una cifra parecida |
+| `Sources/CuadernoCore/AgrupadorTrazos.swift` | Ahora también corta cada renglón en trozos por los huecos |
+| `CuadernoApp.swiftpm/Asientos/ApunteEditable.swift` | El apunte corregible en línea (cifra y cuenta como campos, menú al mantener pulsado), igual en el panel y en En limpio. Sustituye a `ApuntesView` y `CorregirApunteView` |
