@@ -25,7 +25,7 @@ struct HojaView: View {
         Group {
             switch modo {
             case .lienzo: lienzo
-            case .limpio: LimpioView(resueltos: editor.resueltos)
+            case .limpio: LimpioView(editor: editor)
             }
         }
         .navigationBarTitleDisplayMode(.inline)

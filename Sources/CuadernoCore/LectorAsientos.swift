@@ -158,9 +158,21 @@ public enum LectorAsientos {
             // La primera lectura que es un apunte; las demás quedan como dudas para cuadrar.
             let opciones = fila.zona == .centro ? []
                 : lecturas(fila.palabras).compactMap { apunte(en: numerico($0), lado: fila.lado) }
-            if let elegido = opciones.first {
+            if var elegido = opciones.first {
+                // El nombre escrito confirma el código: si encaja mejor con otro, se toma ese.
+                if let codigo = NombreCuenta.mejorCodigo(leido: elegido.cuenta, otros: opciones.map(\.cuenta), texto: texto),
+                   let nombre = PlanDeCuentas.nombre(de: codigo) {
+                    actual.pistas.append("Leo la \(elegido.cuenta), pero el nombre escrito es el de la \(codigo) "
+                        + "(\(nombre)): tomo la \(codigo). Si no, tócala y corrígela.")
+                    elegido.cuenta = codigo
+                }
                 actual.apuntes.append(elegido)
-                dudas.append(opciones.filter { $0.cuenta == elegido.cuenta && $0.importe != elegido.importe })
+                var otras: [Apunte] = []
+                for opcion in opciones where opcion.importe != elegido.importe {
+                    let duda = Apunte(elegido.lado, elegido.cuenta, opcion.importe)
+                    if !otras.contains(duda) { otras.append(duda) }
+                }
+                dudas.append(otras)
                 continue
             }
             // Filas sin números («Debe», «Haber», un título, la «a»): no son apuntes, se ignoran.

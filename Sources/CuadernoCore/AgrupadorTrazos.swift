@@ -49,6 +49,10 @@ public struct RenglonTrazos: Hashable, Sendable {
     public let x: Double
     /// Altura del renglón: la media de sus trazos con cuerpo, sin comas ni puntos.
     public let y: Double
+    /// Los trozos del renglón separados por un hueco (el importe, el nombre, el código), de
+    /// izquierda a derecha. Cada trozo se lee aparte: un número suelto se lee mejor solo que
+    /// con un hueco grande en medio.
+    public let trozos: [[Int]]
 }
 
 /// Decide qué trazos forman cada renglón antes de leer nada, con la geometría de la tinta.
@@ -87,13 +91,32 @@ public enum AgrupadorTrazos {
                 let caja = grupo.dropFirst().reduce(cajas[grupo[0]]) { $0.uniendo(cajas[$1]) }
                 let conAltura = grupo.filter(conCuerpo)
                 let base = conAltura.isEmpty ? grupo : conAltura
+                let ordenados = grupo.sorted { cajas[$0].minX < cajas[$1].minX }
                 resultado.append(RenglonTrazos(
-                    zona: zona, indices: grupo.sorted { cajas[$0].minX < cajas[$1].minX }, caja: caja,
+                    zona: zona, indices: ordenados, caja: caja,
                     x: grupo.map { cajas[$0].midX }.reduce(0, +) / Double(grupo.count) / anchoPagina,
-                    y: base.map { cajas[$0].midY }.reduce(0, +) / Double(base.count)))
+                    y: base.map { cajas[$0].midY }.reduce(0, +) / Double(base.count),
+                    trozos: trocear(ordenados, cajas, hueco: letra)))
             }
         }
         return resultado.sorted { $0.y == $1.y ? $0.zona.rawValue < $1.zona.rawValue : $0.y < $1.y }
+    }
+
+    /// Corta el renglón donde hay un hueco de más de `hueco` entre lo escrito hasta ahí y el
+    /// siguiente trazo. Entre las cifras de un número no hay tanto hueco.
+    private static func trocear(_ ordenados: [Int], _ cajas: [CajaTrazo], hueco: Double) -> [[Int]] {
+        var trozos: [[Int]] = []
+        var finTrozo = -Double.infinity
+        for i in ordenados {
+            if trozos.isEmpty || cajas[i].minX - finTrozo > hueco {
+                trozos.append([i])
+                finTrozo = cajas[i].maxX
+            } else {
+                trozos[trozos.count - 1].append(i)
+                finTrozo = max(finTrozo, cajas[i].maxX)
+            }
+        }
+        return trozos
     }
 
     /// La altura típica de una cifra escrita: la mediana de los trazos, sin puntos ni comas.

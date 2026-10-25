@@ -58,7 +58,7 @@ extension LectorAsientos {
     }
 
     /// Cifras que se confunden al escribir a mano o al leerlas.
-    private static let parecidas: Set<String> = [
+    static let parecidas: Set<String> = [
         "17", "49", "38", "56", "06", "08", "09", "27", "68", "35", "14", "23", "58", "89",
     ]
 

@@ -2,14 +2,14 @@ import SwiftUI
 
 /// Panel lateral: lo reconocido de la hoja, en vivo. Cada asiento con su fecha (la eliges tú),
 /// sus apuntes, si cuadra y recomendaciones. Nunca bloquea: puedes seguir escribiendo.
-/// Lo mal leído se corrige tocándolo, sin reescribir la tinta.
+/// Lo mal leído se corrige donde está: se toca la cifra o la cuenta y se escribe encima.
 struct PanelAsientosView: View {
     @ObservedObject var editor: EditorHoja
     @State var cuentaMayor: CuentaSeleccionada? = nil
-    @State var edicion: EdicionApunte? = nil
 
     var body: some View {
         let resueltos = editor.resueltos
+        let acciones = editor.acciones { cuentaMayor = CuentaSeleccionada(codigo: $0) }
         List {
             if resueltos.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -22,12 +22,14 @@ struct PanelAsientosView: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 8)
+            } else {
+                Text("Toca una cifra o una cuenta para corregirla escribiendo encima; mantén pulsado para más.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
             ForEach(resueltos) { resuelto in
-                AsientoPanel(resuelto: resuelto,
+                AsientoPanel(resuelto: resuelto, acciones: acciones,
                              cambiarFecha: { editor.ponerFecha($0, asiento: resuelto.numero - 1) },
-                             verMayor: { cuentaMayor = CuentaSeleccionada(codigo: $0) },
-                             corregir: { edicion = $0 },
                              recuperar: { editor.recuperarDescartadas(asiento: resuelto.numero - 1) })
             }
         }
@@ -35,19 +37,13 @@ struct PanelAsientosView: View {
         .sheet(item: $cuentaMayor) { cuenta in
             MayorView(mayor: Mayor(cuenta: cuenta.codigo, asientos: editor.asientos))
         }
-        .sheet(item: $edicion) { edicion in
-            CorregirApunteView(edicion: edicion,
-                               guardar: { editor.corregir(asiento: edicion.asiento, leido: edicion.leido, por: $0) },
-                               volverALoLeido: { editor.quitarCorreccion(asiento: edicion.asiento, leido: edicion.leido) })
-        }
     }
 }
 
 private struct AsientoPanel: View {
     let resuelto: AsientoResuelto
+    let acciones: AccionesApunte
     let cambiarFecha: (Fecha) -> Void
-    let verMayor: (String) -> Void
-    let corregir: (EdicionApunte) -> Void
     let recuperar: () -> Void
 
     var body: some View {
@@ -64,25 +60,12 @@ private struct AsientoPanel: View {
                 }
             }
 
-            ApuntesView(lineas: resuelto.lineas, corregir: { corregir(edicion(de: $0)) }, verMayor: verMayor)
-
-            // Filas con números que no son un apunte: se tocan para decir qué pone.
-            ForEach(resuelto.leido.noEntendido, id: \.self) { fila in
-                Button { corregir(edicion(deFila: fila)) } label: {
-                    Label("«\(fila)» · toca para corregir", systemImage: "questionmark.circle")
-                        .font(.footnote)
-                        .foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
+            ForEach(resuelto.filasEditables) { fila in
+                ApunteEditable(fila: fila, estilo: .panel, acciones: acciones)
             }
-            if resuelto.descartadas > 0 {
-                Button("\(resuelto.descartadas) descartado\(resuelto.descartadas == 1 ? "" : "s") a mano · Recuperar",
-                       action: recuperar)
-                    .font(.caption)
-                    .buttonStyle(.borderless)
-            }
+            DescartadasView(cuantas: resuelto.descartadas, recuperar: recuperar)
 
-            estado
+            EstadoAsiento(resuelto: resuelto)
             ForEach(resuelto.avisos + resuelto.sugerencias, id: \.self) { texto in
                 Label(texto, systemImage: "lightbulb")
                     .font(.caption)
@@ -91,24 +74,13 @@ private struct AsientoPanel: View {
         }
         .padding(.vertical, 4)
     }
+}
 
-    private func edicion(de linea: LineaAsiento) -> EdicionApunte {
-        EdicionApunte(asiento: resuelto.numero - 1, leido: linea.leido, lado: linea.apunte.lado,
-                      cuenta: linea.apunte.cuenta, importe: Importe.formatear(linea.apunte.importe),
-                      corregida: linea.corregida)
-    }
+/// Si el asiento cuadra (con su efecto en el EBITDA) o cuánto falta.
+struct EstadoAsiento: View {
+    let resuelto: AsientoResuelto
 
-    /// Para una fila sin entender: la cuenta, si se lee, y el lado al que le falta dinero.
-    private func edicion(deFila fila: String) -> EdicionApunte {
-        let apuntes = resuelto.leido.apuntes
-        let falta = apuntes.map(\.haber).reduce(0, +) - apuntes.map(\.debe).reduce(0, +)
-        return EdicionApunte(asiento: resuelto.numero - 1, leido: .fila(fila), lado: falta >= 0 ? .debe : .haber,
-                             cuenta: LectorAsientos.cuentaSinImporte(LectorAsientos.numerico(fila)) ?? "",
-                             importe: "", corregida: false)
-    }
-
-    @ViewBuilder
-    private var estado: some View {
+    var body: some View {
         switch resuelto.resultado {
         case .success(let asiento):
             let impacto = MapeoKPI.ebitda.impacto(de: asiento)

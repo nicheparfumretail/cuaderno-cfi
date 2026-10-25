@@ -4,10 +4,16 @@ import SwiftUI
 ///
 ///     Debe ———————————— 01/12/2024 ———————————— Haber
 ///     1.000,00  Proveedores  (400)   a   (572)  Bancos  1.000,00
+///
+/// También se corrige aquí: se toca una cifra o una cuenta y se escribe encima. Se guarda en el
+/// mismo sitio que desde el panel del lienzo, así que lo corregido sale en las dos vistas.
 struct LimpioView: View {
-    let resueltos: [AsientoResuelto]
+    @ObservedObject var editor: EditorHoja
+    @State private var cuentaMayor: CuentaSeleccionada? = nil
 
     var body: some View {
+        let resueltos = editor.resueltos
+        let acciones = editor.acciones { cuentaMayor = CuentaSeleccionada(codigo: $0) }
         ScrollView {
             LazyVStack(spacing: 32) {
                 if resueltos.isEmpty {
@@ -15,22 +21,31 @@ struct LimpioView: View {
                         .foregroundStyle(.secondary)
                         .padding(.top, 60)
                 }
-                ForEach(resueltos) { AsientoLimpio(resuelto: $0) }
+                ForEach(resueltos) { resuelto in
+                    AsientoLimpio(resuelto: resuelto, acciones: acciones,
+                                  recuperar: { editor.recuperarDescartadas(asiento: resuelto.numero - 1) })
+                }
             }
             .padding(32)
             .frame(maxWidth: 1000)
             .frame(maxWidth: .infinity)
         }
         .background(Color(uiColor: .systemBackground))
+        .sheet(item: $cuentaMayor) { cuenta in
+            MayorView(mayor: Mayor(cuenta: cuenta.codigo, asientos: editor.asientos))
+        }
     }
 }
 
 private struct AsientoLimpio: View {
     let resuelto: AsientoResuelto
+    let acciones: AccionesApunte
+    let recuperar: () -> Void
 
     var body: some View {
-        let debe = resuelto.leido.apuntes.filter { $0.lado == .debe }
-        let haber = resuelto.leido.apuntes.filter { $0.lado == .haber }
+        let filas = resuelto.filasEditables
+        let debe = filas.filter { $0.lado == .debe }
+        let haber = filas.filter { $0.lado == .haber }
         VStack(spacing: 10) {
             HStack(spacing: 12) {
                 Text("Debe").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
@@ -55,6 +70,7 @@ private struct AsientoLimpio: View {
                 }
             }
 
+            DescartadasView(cuantas: resuelto.descartadas, recuperar: recuperar)
             pie
         }
         .font(.system(.body, design: .serif).monospacedDigit())
@@ -66,25 +82,10 @@ private struct AsientoLimpio: View {
 
     /// Debe: importe · nombre · (nº). Haber: (nº) · nombre · importe. Como en el cuaderno.
     @ViewBuilder
-    private func lado(_ apunte: Apunte?, esDebe: Bool) -> some View {
-        if let apunte {
-            let importe = Text(Importe.formatear(apunte.importe)).frame(width: 110, alignment: esDebe ? .leading : .trailing)
-            let nombre = Text(PlanDeCuentas.nombre(de: apunte.cuenta) ?? "").lineLimit(1).minimumScaleFactor(0.7)
-            let codigo = Text("(\(apunte.cuenta))").foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if esDebe {
-                    importe
-                    nombre
-                    Spacer(minLength: 4)
-                    codigo
-                } else {
-                    codigo
-                    nombre
-                    Spacer(minLength: 4)
-                    importe
-                }
-            }
-            .frame(maxWidth: .infinity)
+    private func lado(_ fila: FilaEditable?, esDebe: Bool) -> some View {
+        if let fila {
+            ApunteEditable(fila: fila, estilo: .limpio, acciones: acciones)
+                .frame(maxWidth: .infinity)
         } else {
             Spacer().frame(maxWidth: .infinity)
         }

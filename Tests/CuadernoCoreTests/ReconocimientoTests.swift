@@ -121,6 +121,47 @@ final class ReconocimientoTests: XCTestCase {
         XCTAssertEqual(renglones[0].indices.count, renglon.count + 1)
     }
 
+    /// Captura del iPad (25-10-2026, 22:48): «819 … (472)» se leyó «89». Con el hueco del nombre
+    /// en medio, cada trozo se lee aparte.
+    func testRenglonSeParteEnTrozosPorLosHuecos() {
+        let cifras = [40.0, 62, 84].map { trazo($0, 100) }
+        let codigo = stride(from: 300.0, to: 400, by: 22).map { trazo($0, 100) }
+        let renglones = AgrupadorTrazos.renglones(cifras + codigo, anchoPagina: 1000, zonas: Zonas())
+        XCTAssertEqual(renglones.count, 1)
+        XCTAssertEqual(renglones[0].trozos.map(\.count), [cifras.count, codigo.count])
+    }
+
+    // MARK: - El nombre escrito confirma la cuenta
+
+    /// Captura del iPad (25-10-2026, 22:48): «(600)» se leyó «(608)», pero al lado pone «mercaderías».
+    func testElNombreEscritoCorrigeLaCuenta() throws {
+        let palabras = [
+            PalabraLeida("4.900,00", x: 0.08, y: 200), PalabraLeida("merraderics", x: 0.25, y: 200),
+            PalabraLeida("(608)", x: 0.37, y: 200),
+            PalabraLeida("(400)", x: 0.62, y: 200), PalabraLeida("Proveedores", x: 0.78, y: 200),
+            PalabraLeida("4.900,00", x: 0.93, y: 200),
+        ]
+        let leido = try XCTUnwrap(LectorAsientos.leer(palabras).first)
+        XCTAssertEqual(leido.apuntes, [Apunte(.debe, "600", 4_900), Apunte(.haber, "400", 4_900)])
+        XCTAssertEqual(leido.pistas, ["Leo la 608, pero el nombre escrito es el de la 600 (Compras de mercaderías): "
+                                      + "tomo la 600. Si no, tócala y corrígela."])
+    }
+
+    func testSiElNombreEncajaNoSeTocaLaCuenta() throws {
+        let palabras = [PalabraLeida("300,00", x: 0.08, y: 200), PalabraLeida("Devoluciones", x: 0.2, y: 200),
+                        PalabraLeida("compras", x: 0.3, y: 200), PalabraLeida("(608)", x: 0.37, y: 200)]
+        let leido = try XCTUnwrap(LectorAsientos.leer(palabras).first)
+        XCTAssertEqual(leido.apuntes, [Apunte(.debe, "608", 300)])
+        XCTAssertEqual(leido.pistas, [])
+    }
+
+    func testPalabrasQueSeParecen() {
+        XCTAssertTrue(NombreCuenta.seParecen("merraderics", "mercaderias"))
+        XCTAssertTrue(NombreCuenta.seParecen("antic", "anticipos"), "abreviada")
+        XCTAssertFalse(NombreCuenta.seParecen("bancos", "caja"))
+        XCTAssertEqual(NombreCuenta.palabras("HP, IVA soportado"), ["soportado"])
+    }
+
     func testHojasConPistasSeGuardanYSeLeen() throws {
         let leido = AsientoLeido(apuntes: [Apunte(.debe, "572", 10)], pistas: ["Compruébalo."])
         let copia = try JSONDecoder().decode(AsientoLeido.self, from: JSONEncoder().encode(leido))

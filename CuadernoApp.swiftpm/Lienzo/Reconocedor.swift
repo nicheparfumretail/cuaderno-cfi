@@ -11,12 +11,13 @@ struct LecturaTinta {
 /// Tinta → renglones → texto (Vision, en el propio iPad y sin conexión). Qué significa cada
 /// cosa lo decide `LectorAsientos` en el motor.
 ///
-/// Los trazos se agrupan primero en renglones por su geometría (`AgrupadorTrazos`) y cada
-/// renglón se recorta y se lee por separado, dos veces (tinta normal y engordada) y con varias
-/// lecturas candidatas: el motor elige la que hace cuadrar el asiento. Lo leído se guarda por
-/// renglón, así que retocar una cifra solo vuelve a leer ese renglón y el resto no se mueve.
+/// Los trazos se agrupan primero en renglones por su geometría (`AgrupadorTrazos`), y cada
+/// renglón en trozos separados por un hueco (el importe, el nombre, el código). Cada trozo se
+/// recorta y se lee por separado, dos veces (tinta normal y engordada) y con varias lecturas
+/// candidatas: el motor elige la que hace cuadrar el asiento. Lo leído se guarda por trozo, así
+/// que retocar una cifra solo vuelve a leer ese trozo y el resto no se mueve.
 enum Reconocedor {
-    /// Lecturas por huella de los trazos de cada renglón.
+    /// Lecturas por huella de los trazos de cada trozo.
     @MainActor private static var memoria: [Int: [String]] = [:]
 
     @MainActor
@@ -37,14 +38,20 @@ enum Reconocedor {
                       maxX: Double($0.renderBounds.maxX), maxY: Double($0.renderBounds.maxY))
         }
         let renglones = AgrupadorTrazos.renglones(cajas, anchoPagina: Double(anchoPagina), zonas: zonas)
-        let huellas = renglones.map { huella($0.indices.map { texto[$0] }) }
+        // (renglón, trozo, huella) de cada trozo de la hoja.
+        var trozos: [(Int, [Int], Int)] = []
+        for (numero, renglon) in renglones.enumerated() {
+            for trozo in renglon.trozos {
+                trozos.append((numero, trozo, huella(trozo.map { texto[$0] })))
+            }
+        }
 
-        // Solo se leen los renglones nuevos o retocados; las imágenes se pintan aquí y Vision
-        // trabaja fuera del hilo principal, todos los renglones a la vez.
+        // Solo se leen los trozos nuevos o retocados; las imágenes se pintan aquí y Vision
+        // trabaja fuera del hilo principal, todos los trozos a la vez.
         var pendientes: [(Int, [CGImage])] = []
-        for (renglon, huella) in zip(renglones, huellas) where memoria[huella] == nil {
+        for (_, trozo, huella) in trozos where memoria[huella] == nil {
             if !pendientes.contains(where: { $0.0 == huella }) {
-                pendientes.append((huella, imagenes(renglon.indices.map { texto[$0] })))
+                pendientes.append((huella, imagenes(trozo.map { texto[$0] })))
             }
         }
         let nuevas = await withTaskGroup(of: (Int, [String]).self) { grupo -> [Int: [String]] in
@@ -58,9 +65,11 @@ enum Reconocedor {
         if memoria.count > 500 { memoria = [:] }
         memoria.merge(nuevas) { _, nueva in nueva }
 
-        for (numero, (renglon, huella)) in zip(renglones, huellas).enumerated() {
+        for (numero, trozo, huella) in trozos {
             guard let lecturas = memoria[huella], let primera = lecturas.first else { continue }
-            lectura.palabras.append(PalabraLeida(primera, x: renglon.x, y: renglon.y, alto: renglon.caja.alto,
+            let renglon = renglones[numero]
+            let x = trozo.map { cajas[$0].midX }.reduce(0, +) / Double(trozo.count) / Double(anchoPagina)
+            lectura.palabras.append(PalabraLeida(primera, x: x, y: renglon.y, alto: renglon.caja.alto,
                                                  alternativas: Array(lecturas.dropFirst()), renglon: numero))
         }
         return lectura

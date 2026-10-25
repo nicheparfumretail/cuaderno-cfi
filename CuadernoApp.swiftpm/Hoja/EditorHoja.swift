@@ -57,6 +57,14 @@ final class EditorHoja: ObservableObject {
         guardar()
     }
 
+    /// Lo que se puede hacer con un apunte, igual desde el panel que desde En limpio.
+    func acciones(verMayor: @escaping (String) -> Void) -> AccionesApunte {
+        AccionesApunte(
+            corregir: { [weak self] fila, apunte in self?.corregir(asiento: fila.asiento, leido: fila.leido, por: apunte) },
+            volver: { [weak self] fila in self?.quitarCorreccion(asiento: fila.asiento, leido: fila.leido) },
+            verMayor: verMayor)
+    }
+
     /// Relee la hoja cuando se deja de escribir un momento; cada trazo nuevo reinicia la espera.
     func programarLectura(espera segundos: Double) {
         lectura?.cancel()
