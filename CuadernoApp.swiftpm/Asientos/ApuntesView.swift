@@ -6,13 +6,16 @@ struct CuentaSeleccionada: Identifiable {
 }
 
 /// Los apuntes como en el cuaderno: importe del Debe | cuenta (con «a» si es Haber) | importe del Haber.
-/// Mantener pulsada una cuenta abre su mayor.
+/// Tocar un apunte lo corrige; mantener pulsada la cuenta abre su mayor. Los corregidos a mano
+/// llevan un lápiz.
 struct ApuntesView: View {
-    let apuntes: [Apunte]
+    let lineas: [LineaAsiento]
+    let corregir: (LineaAsiento) -> Void
     let verMayor: (String) -> Void
 
     var body: some View {
-        ForEach(Array(apuntes.enumerated()), id: \.offset) { _, apunte in
+        ForEach(Array(lineas.enumerated()), id: \.offset) { _, linea in
+            let apunte = linea.apunte
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(apunte.lado == .debe ? Importe.formatear(apunte.importe) : "")
                     .frame(width: 72, alignment: .trailing)
@@ -20,12 +23,17 @@ struct ApuntesView: View {
                     .lineLimit(1)
                     .padding(.leading, apunte.lado == .haber ? 14 : 0)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
                     .onLongPressGesture { verMayor(apunte.cuenta) }
                 Text(apunte.lado == .haber ? Importe.formatear(apunte.importe) : "")
                     .frame(width: 72, alignment: .trailing)
+                Image(systemName: "pencil")
+                    .font(.caption2)
+                    .foregroundStyle(.blue)
+                    .opacity(linea.corregida ? 1 : 0)
             }
             .font(.footnote.monospacedDigit())
+            .contentShape(Rectangle())
+            .onTapGesture { corregir(linea) }
         }
     }
 

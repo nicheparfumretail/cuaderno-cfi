@@ -41,6 +41,22 @@ final class EditorHoja: ObservableObject {
         guardar()
     }
 
+    /// Corrige a mano algo leído (o lo descarta, con `apunte` nil). La tinta no se toca.
+    func corregir(asiento indice: Int, leido: Correccion.Leido, por apunte: Apunte?) {
+        hoja.datos.corregir(asiento: indice, leido: leido, por: apunte)
+        guardar()
+    }
+
+    func quitarCorreccion(asiento indice: Int, leido: Correccion.Leido) {
+        hoja.datos.quitarCorreccion(asiento: indice, leido: leido)
+        guardar()
+    }
+
+    func recuperarDescartadas(asiento indice: Int) {
+        hoja.datos.recuperarDescartadas(asiento: indice)
+        guardar()
+    }
+
     /// Relee la hoja cuando se deja de escribir un momento; cada trazo nuevo reinicia la espera.
     func programarLectura(espera segundos: Double) {
         lectura?.cancel()

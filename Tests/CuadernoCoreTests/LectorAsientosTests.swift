@@ -163,9 +163,9 @@ final class LectorAsientosTests: XCTestCase {
 
     /// Vision lee la barra «/» de la fecha escrita a mano como un 1.
     func testFechaConBarrasLeidasComoUnos() {
-        XCTAssertEqual(LectorAsientos.fechaConBarrasLeidasComoUnos(en: "10101125"), Fecha(año: 2025, mes: 1, dia: 10))
-        XCTAssertEqual(LectorAsientos.fechaConBarrasLeidasComoUnos(en: "2511012025"), Fecha(año: 2025, mes: 10, dia: 25))
-        XCTAssertNil(LectorAsientos.fechaConBarrasLeidasComoUnos(en: "12345678"))
+        XCTAssertEqual(FechaEscrita.leer("10101125"), Fecha(año: 2025, mes: 1, dia: 10))
+        XCTAssertEqual(FechaEscrita.leer("2511012025"), Fecha(año: 2025, mes: 10, dia: 25))
+        XCTAssertNil(FechaEscrita.leer("12345678"))
         let palabras = [PalabraLeida("10l01l25", x: 0.5, y: 100),
                         PalabraLeida("1000", x: 0.05, y: 200), PalabraLeida("572", x: 0.35, y: 200),
                         PalabraLeida("430", x: 0.65, y: 200), PalabraLeida("1000", x: 0.95, y: 200)]

@@ -30,7 +30,12 @@ public struct AsientoResuelto: Identifiable {
     public let fecha: Fecha
     public let fechaPuestaAMano: Bool
     public let concepto: String
+    /// Lo leído de la tinta, con las correcciones hechas en el panel ya aplicadas.
     public let leido: AsientoLeido
+    /// Los apuntes como se enseñan: cada uno sabe de qué lectura sale y si está corregido.
+    public let lineas: [LineaAsiento]
+    /// Cuántas cosas leídas se han descartado a mano en este asiento.
+    public let descartadas: Int
     /// El asiento, si cumple la partida doble; si no, el error con la diferencia.
     public let resultado: Result<Asiento, Error>
     /// Avisos de estudio que no impiden el asiento (por ejemplo, en la apertura).
@@ -50,19 +55,36 @@ public struct DatosHoja: Codable, Hashable, Sendable {
     /// Fecha elegida a mano para un asiento, por su posición en la hoja (0 = el primero).
     public var fechasManuales: [Int: Fecha]
     public var zonas: Zonas
+    /// Apuntes corregidos a mano en el panel.
+    public var correcciones: [Correccion]
 
-    public init(esApertura: Bool, fechaInicial: Fecha, fechasManuales: [Int: Fecha] = [:], zonas: Zonas = Zonas()) {
+    public init(esApertura: Bool, fechaInicial: Fecha, fechasManuales: [Int: Fecha] = [:], zonas: Zonas = Zonas(),
+                correcciones: [Correccion] = []) {
         self.esApertura = esApertura
         self.fechaInicial = fechaInicial
         self.fechasManuales = fechasManuales
         self.zonas = zonas
+        self.correcciones = correcciones
+    }
+
+    private enum CodingKeys: String, CodingKey { case esApertura, fechaInicial, fechasManuales, zonas, correcciones }
+
+    /// Tolerante con hojas guardadas por versiones anteriores, que no tenían todos los campos.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(esApertura: try c.decode(Bool.self, forKey: .esApertura),
+                  fechaInicial: try c.decode(Fecha.self, forKey: .fechaInicial),
+                  fechasManuales: try c.decodeIfPresent([Int: Fecha].self, forKey: .fechasManuales) ?? [:],
+                  zonas: try c.decodeIfPresent(Zonas.self, forKey: .zonas) ?? Zonas(),
+                  correcciones: try c.decodeIfPresent([Correccion].self, forKey: .correcciones) ?? [])
     }
 
     /// Numera los asientos leídos y decide su fecha: la puesta a mano; si no, la escrita y leída;
     /// si no, la del asiento anterior («si sigo con el mismo día, el programa lo entiende»).
     public func resolver(_ leidos: [AsientoLeido], empresa: String) -> [AsientoResuelto] {
         var anterior = fechaInicial
-        return leidos.enumerated().map { indice, leido in
+        return leidos.enumerated().map { indice, tinta in
+            let (leido, lineas, descartadas) = aplicandoCorrecciones(a: tinta, asiento: indice)
             let manual = fechasManuales[indice]
             let fecha = manual ?? leido.fecha ?? anterior
             anterior = fecha
@@ -73,7 +95,8 @@ public struct DatosHoja: Codable, Hashable, Sendable {
                 try Asiento(empresa: empresa, numero: numero, fecha: fecha, concepto: concepto, apuntes: leido.apuntes)
             }
             return AsientoResuelto(numero: numero, fecha: fecha, fechaPuestaAMano: manual != nil,
-                                   concepto: concepto, leido: leido, resultado: resultado,
+                                   concepto: concepto, leido: leido, lineas: lineas, descartadas: descartadas,
+                                   resultado: resultado,
                                    avisos: apertura ? DatosHoja.avisosApertura(leido.apuntes) : [],
                                    sugerencias: DatosHoja.sugerencias(leido))
         }
