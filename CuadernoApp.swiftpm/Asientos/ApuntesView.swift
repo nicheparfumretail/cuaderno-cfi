@@ -5,36 +5,8 @@ struct CuentaSeleccionada: Identifiable {
     var id: String { codigo }
 }
 
-/// Un libro diario en limpio (solo lectura), en el formato de clase. Se usa para el caso Túria.
-/// Mantener pulsada una cuenta abre su mayor.
-struct DiarioView: View {
-    let asientos: [Asiento]
-    @State var cuentaMayor: CuentaSeleccionada? = nil
-
-    var body: some View {
-        List(asientos) { asiento in
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Nº \(asiento.numero)").bold()
-                    Text(asiento.fecha.description)
-                    if !asiento.concepto.isEmpty {
-                        Text("· \(asiento.concepto)").lineLimit(1)
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                ApuntesView(apuntes: asiento.apuntesOrdenados) { cuentaMayor = CuentaSeleccionada(codigo: $0) }
-            }
-            .padding(.vertical, 4)
-        }
-        .listStyle(.plain)
-        .sheet(item: $cuentaMayor) { cuenta in
-            MayorView(mayor: Mayor(cuenta: cuenta.codigo, asientos: asientos))
-        }
-    }
-}
-
 /// Los apuntes como en el cuaderno: importe del Debe | cuenta (con «a» si es Haber) | importe del Haber.
+/// Mantener pulsada una cuenta abre su mayor.
 struct ApuntesView: View {
     let apuntes: [Apunte]
     let verMayor: (String) -> Void

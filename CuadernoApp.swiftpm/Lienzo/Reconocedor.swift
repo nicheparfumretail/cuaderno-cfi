@@ -2,22 +2,42 @@ import UIKit
 import PencilKit
 import Vision
 
-/// Tinta → palabras con su posición, con Vision en el propio iPad (sin conexión).
-/// Qué significa cada palabra (fecha, importe, cuenta, lado) lo decide `LectorAsientos` en el motor.
+/// Lo que sale de la tinta antes de interpretarla: palabras con posición y rayas.
+struct LecturaTinta {
+    var palabras: [PalabraLeida] = []
+    var separadores: [Double] = []
+}
+
+/// Tinta → palabras con su posición (Vision, en el propio iPad y sin conexión) y rayas que
+/// separan asientos. Qué significa cada cosa lo decide `LectorAsientos` en el motor.
 enum Reconocedor {
     @MainActor
-    static func palabras(de dibujo: PKDrawing, anchoLienzo: CGFloat) async -> [PalabraLeida] {
-        guard !dibujo.strokes.isEmpty, anchoLienzo > 0 else { return [] }
-        let marco = dibujo.bounds.insetBy(dx: -24, dy: -24)
-        guard let imagen = imagenParaLeer(dibujo, marco: marco) else { return [] }
+    static func leer(_ dibujo: PKDrawing, anchoPagina: CGFloat) async -> LecturaTinta {
+        var lectura = LecturaTinta()
+        var texto: [PKStroke] = []
+        for trazo in dibujo.strokes {
+            let caja = trazo.renderBounds
+            if LectorAsientos.esSeparador(ancho: Double(caja.width), alto: Double(caja.height),
+                                          anchoPagina: Double(anchoPagina)) {
+                lectura.separadores.append(Double(caja.midY))
+            } else {
+                texto.append(trazo)
+            }
+        }
+        // Las rayas no se pasan a Vision: solo estorbarían al leer los números.
+        let soloTexto = PKDrawing(strokes: texto)
+        guard !soloTexto.strokes.isEmpty else { return lectura }
+        let marco = soloTexto.bounds.insetBy(dx: -24, dy: -24)
+        guard let imagen = imagenParaLeer(soloTexto, marco: marco) else { return lectura }
         let leidas = await leer(imagen)
-        // Vision da cajas normalizadas (0–1) con el origen abajo a la izquierda; se pasan al lienzo.
-        return leidas.map { texto, caja in
-            PalabraLeida(texto,
-                         x: Double((marco.minX + caja.midX * marco.width) / anchoLienzo),
+        // Vision da cajas normalizadas (0–1) con el origen abajo a la izquierda; se pasan a la página.
+        lectura.palabras = leidas.map { palabra, caja in
+            PalabraLeida(palabra,
+                         x: Double((marco.minX + caja.midX * marco.width) / anchoPagina),
                          y: Double(marco.minY + (1 - caja.midY) * marco.height),
                          alto: Double(caja.height * marco.height))
         }
+        return lectura
     }
 
     @MainActor

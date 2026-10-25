@@ -17,7 +17,7 @@ public struct PalabraLeida: Hashable, Sendable {
 }
 
 /// Un asiento tal como se ha leído de la tinta: puede estar a medio escribir o no cuadrar.
-public struct AsientoLeido: Hashable, Sendable {
+public struct AsientoLeido: Hashable, Codable, Sendable {
     public var fecha: Fecha?
     public var apuntes: [Apunte] = []
     /// Filas con números que no se han podido convertir en apunte; se enseñan para corregirlas.
@@ -28,6 +28,9 @@ public struct AsientoLeido: Hashable, Sendable {
         self.apuntes = apuntes
         self.noEntendido = noEntendido
     }
+
+    /// Sin apuntes ni filas por corregir: no hay asiento (una raya de más, una fecha suelta).
+    public var vacio: Bool { apuntes.isEmpty && noEntendido.isEmpty }
 
     /// El asiento solo existe si cumple las reglas del motor (partida doble incluida).
     public func asiento(empresa: String, numero: Int) -> Result<Asiento, Error> {
@@ -43,13 +46,11 @@ public struct AsientoLeido: Hashable, Sendable {
 ///     Debe ____________ 01/12/24 ____________ Haber
 ///     1.000,00 Proveedores (400)    a    (572) Bancos 1.000,00
 ///
-/// La mitad izquierda es el Debe y la derecha el Haber: la posición dice el lado.
-/// La fecha, en el centro, abre cada asiento. En cada fila, el código de la cuenta va entre
-/// paréntesis y el importe es el número que queda. El nombre de la cuenta se ignora: manda el código.
+/// La zona izquierda es el Debe y la derecha el Haber: la posición dice el lado. Una raya
+/// horizontal separa un asiento del siguiente; una fecha en el centro, también. En cada fila,
+/// el código de la cuenta va entre paréntesis o pegado al centro, y el importe en el borde.
+/// El nombre de la cuenta se ignora: manda el código.
 public enum LectorAsientos {
-    /// Ancho de la franja central (fecha y «a»), a cada lado de la mitad del lienzo.
-    public static let margenCentro = 0.08
-
     private enum Zona: Int { case debe, centro, haber }
 
     private struct Fila {
@@ -60,45 +61,74 @@ public enum LectorAsientos {
         var texto: String { palabras.sorted { $0.x < $1.x }.map(\.texto).joined(separator: " ") }
     }
 
-    public static func leer(_ palabras: [PalabraLeida]) -> [AsientoLeido] {
-        var filas: [(fila: Fila, fecha: Fecha?)] = []
+    /// Lo que se encuentra al bajar por la hoja: una fila de texto o una raya.
+    private enum Evento {
+        case fila(Fila, fecha: Fecha?)
+        case raya
+    }
+
+    /// - Parameters:
+    ///   - palabras: lo leído de la tinta, con `x` relativa al ancho de la página (0–1).
+    ///   - separadores: altura de cada raya horizontal que separa asientos.
+    ///   - zonas: dónde acaban el Debe y empieza el Haber.
+    public static func leer(_ palabras: [PalabraLeida], separadores: [Double] = [],
+                            zonas: Zonas = Zonas()) -> [AsientoLeido] {
+        var eventos: [(altura: Double, orden: Int, evento: Evento)] = []
         for zona in [Zona.debe, .centro, .haber] {
-            for grupo in agruparEnFilas(palabras.filter { self.zona(de: $0) == zona }) {
+            for grupo in agruparEnFilas(palabras.filter { self.zona(de: $0, zonas: zonas) == zona }) {
                 let fila = Fila(zona: zona, palabras: grupo)
                 let fecha = zona == .centro ? self.fecha(en: numerico(fila.texto)) : nil
-                filas.append((fila, fecha))
+                // La fecha va en la raya, un poco por encima de sus apuntes: se adelanta un renglón
+                // para que abra su asiento antes que las filas que tiene a la misma altura.
+                let altura = fila.y - (fecha != nil ? fila.alto : 0)
+                eventos.append((altura, zona.rawValue, .fila(fila, fecha: fecha)))
             }
         }
-        // La fecha va en la raya, un poco por encima de sus apuntes: se adelanta medio renglón
-        // para que abra su asiento antes que las filas que tiene a la misma altura.
-        filas.sort { a, b in
-            let ya = a.fila.y - (a.fecha != nil ? a.fila.alto : 0)
-            let yb = b.fila.y - (b.fecha != nil ? b.fila.alto : 0)
-            return ya == yb ? a.fila.zona.rawValue < b.fila.zona.rawValue : ya < yb
+        for raya in separadores {
+            eventos.append((raya, -1, .raya))
         }
+        eventos.sort { $0.altura == $1.altura ? $0.orden < $1.orden : $0.altura < $1.altura }
 
         var asientos: [AsientoLeido] = []
-        var actual: AsientoLeido?
-        for (fila, fecha) in filas {
-            let texto = fila.texto
-            // Filas sin números («Debe», «Haber», un título): no son apuntes, se ignoran.
-            guard texto.contains(where: { $0.isNumber }) else { continue }
-            if let fecha {
-                if let anterior = actual { asientos.append(enOrden(anterior)) }
-                actual = AsientoLeido(fecha: fecha)
+        var actual = AsientoLeido()
+        func cerrar() {
+            if actual.vacio {
+                // Una fecha escrita justo encima de la raya sigue valiendo para el asiento de debajo.
+                actual = AsientoLeido(fecha: actual.fecha)
+            } else {
+                asientos.append(enOrden(actual))
+                actual = AsientoLeido()
+            }
+        }
+
+        for (_, _, evento) in eventos {
+            guard case let .fila(fila, fecha) = evento else {
+                cerrar()
                 continue
             }
-            var asiento = actual ?? AsientoLeido()
+            let texto = fila.texto
+            // Filas sin números («Debe», «Haber», un título, la «a»): no son apuntes, se ignoran.
+            guard texto.contains(where: { $0.isNumber }) else { continue }
+            if let fecha {
+                if !actual.vacio { cerrar() }
+                actual.fecha = fecha
+                continue
+            }
             if fila.zona != .centro,
                let nuevo = apunte(en: numerico(texto), lado: fila.zona == .debe ? .debe : .haber) {
-                asiento.apuntes.append(nuevo)
+                actual.apuntes.append(nuevo)
             } else {
-                asiento.noEntendido.append(texto)
+                actual.noEntendido.append(texto)
             }
-            actual = asiento
         }
-        if let ultimo = actual { asientos.append(enOrden(ultimo)) }
+        if !actual.vacio { asientos.append(enOrden(actual)) }
         return asientos
+    }
+
+    /// Una raya que separa asientos: un trazo largo (al menos una quinta parte de la página)
+    /// y casi plano. Las palabras, aunque sean largas, se escriben con trazos cortos.
+    public static func esSeparador(ancho: Double, alto: Double, anchoPagina: Double) -> Bool {
+        ancho >= anchoPagina * 0.2 && alto <= max(24, ancho * 0.08)
     }
 
     /// Como en el cuaderno: primero los apuntes del Debe y después los del Haber.
@@ -108,9 +138,9 @@ public enum LectorAsientos {
         return ordenado
     }
 
-    private static func zona(de palabra: PalabraLeida) -> Zona {
-        if palabra.x < 0.5 - margenCentro { return .debe }
-        if palabra.x > 0.5 + margenCentro { return .haber }
+    private static func zona(de palabra: PalabraLeida, zonas: Zonas) -> Zona {
+        if palabra.x < zonas.finDebe { return .debe }
+        if palabra.x > zonas.inicioHaber { return .haber }
         return .centro
     }
 

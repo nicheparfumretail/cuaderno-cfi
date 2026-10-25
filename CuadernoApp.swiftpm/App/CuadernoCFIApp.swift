@@ -4,7 +4,7 @@ import SwiftUI
 struct CuadernoCFIApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            InicioView()
         }
     }
 }
