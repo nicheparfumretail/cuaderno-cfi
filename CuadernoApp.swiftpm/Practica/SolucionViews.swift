@@ -16,10 +16,7 @@ struct ResumenSolucion: View {
                 Text("Escribe los asientos en el lienzo y vuelve aquí para corregirlos.")
                     .foregroundStyle(.secondary)
             } else if porRevisar == 0 {
-                Label(resueltos.count == 1
-                      ? "El asiento cuadra y sus cuentas existen en el PGC."
-                      : "Los \(resueltos.count) asientos cuadran y sus cuentas existen en el PGC.",
-                      systemImage: "checkmark.seal.fill")
+                Label(textoBien, systemImage: "checkmark.seal.fill")
                     .foregroundStyle(.green)
             } else {
                 Label("\(porRevisar) de \(resueltos.count) asientos por revisar: lo tienes debajo de cada uno.",
@@ -27,10 +24,7 @@ struct ResumenSolucion: View {
                     .foregroundStyle(.orange)
             }
             if !apuntes.isEmpty {
-                Label(debe == haber
-                      ? "Sumas del diario iguales: Debe \(Importe.formatear(debe)) = Haber \(Importe.formatear(haber))."
-                      : "Sumas del diario distintas: Debe \(Importe.formatear(debe)), Haber \(Importe.formatear(haber)) (diferencia \(Importe.formatear(abs(debe - haber)))).",
-                      systemImage: "sum")
+                Label(ResumenSolucion.textoSumas(debe: debe, haber: haber), systemImage: "sum")
                     .foregroundStyle(debe == haber ? Color.secondary : Color.orange)
             }
             Text("Comprueba la partida doble de cada asiento, que sus cuentas existan en el cuadro del PGC y lo que no se ha podido leer. Si una cuenta es la que pedía el enunciado, la app no lo puede saber sin la solución.")
@@ -41,6 +35,20 @@ struct ResumenSolucion: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.secondary.opacity(0.08)))
+    }
+
+    private var textoBien: String {
+        resueltos.count == 1
+            ? "El asiento cuadra y sus cuentas existen en el PGC."
+            : "Los \(resueltos.count) asientos cuadran y sus cuentas existen en el PGC."
+    }
+
+    private static func textoSumas(debe: Decimal, haber: Decimal) -> String {
+        if debe == haber {
+            return "Sumas del diario iguales: Debe \(Importe.formatear(debe)) = Haber \(Importe.formatear(haber))."
+        }
+        let diferencia = Importe.formatear(abs(debe - haber))
+        return "Sumas del diario distintas: Debe \(Importe.formatear(debe)), Haber \(Importe.formatear(haber)) (diferencia \(diferencia))."
     }
 }
 

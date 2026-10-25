@@ -43,8 +43,7 @@ struct MayorView: View {
                         Text(textoSaldo).font(.headline)
                     }
                     if sinCuadrar > 0 {
-                        Label("\(sinCuadrar) asiento\(sinCuadrar == 1 ? "" : "s") de la hoja no cuadra\(sinCuadrar == 1 ? "" : "n"): no entra\(sinCuadrar == 1 ? "" : "n") en el mayor hasta que cuadre\(sinCuadrar == 1 ? "" : "n").",
-                              systemImage: "info.circle")
+                        Label(avisoSinCuadrar, systemImage: "info.circle")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -58,6 +57,12 @@ struct MayorView: View {
             }
         }
         .hojaGrande()
+    }
+
+    private var avisoSinCuadrar: String {
+        sinCuadrar == 1
+            ? "1 asiento de la hoja no cuadra: no entra en el mayor hasta que cuadre."
+            : "\(sinCuadrar) asientos de la hoja no cuadran: no entran en el mayor hasta que cuadren."
     }
 
     private var textoSaldo: String {

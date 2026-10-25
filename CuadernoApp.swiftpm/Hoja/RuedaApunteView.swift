@@ -21,53 +21,77 @@ struct RuedaApunteView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let origen = geo.frame(in: .global).origin
-            // Que la rueda entera quepa en pantalla aunque el apunte esté en un borde.
-            let x = min(max(rueda.centro.x - origen.x, radio + 50), geo.size.width - radio - 50)
-            let y = min(max(rueda.centro.y - origen.y, radio + 50), geo.size.height - radio - 50)
             ZStack {
                 Color.black.opacity(abierta ? 0.12 : 0)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: cerrar)
-                ZStack {
-                    Circle()
-                        .stroke(.regularMaterial, style: StrokeStyle(lineWidth: 66))
-                        .frame(width: radio * 2, height: radio * 2)
-                        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
-                    VStack(spacing: 0) {
-                        Text(rueda.fila.cuenta.isEmpty ? "?" : rueda.fila.cuenta)
-                            .font(.headline.monospacedDigit())
-                        if let importe = rueda.fila.importe {
-                            Text(Importe.formatear(importe)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
-                        }
-                    }
-                    ForEach(Array(opciones.enumerated()), id: \.element.id) { indice, opcion in
-                        let angulo = (-90 + 360 / Double(opciones.count) * Double(indice)) * .pi / 180
-                        Button {
-                            opcion.accion()
-                        } label: {
-                            VStack(spacing: 2) {
-                                Image(systemName: opcion.icono).font(.title3)
-                                Text(opcion.titulo).font(.system(size: 9, weight: .semibold)).fixedSize()
-                            }
-                            .foregroundStyle(opcion.destructiva ? Color.red : Color.primary)
-                            .frame(width: 60, height: 52)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(opcion.titulo)
-                        .offset(x: radio * cos(angulo), y: radio * sin(angulo))
-                    }
-                }
-                .scaleEffect(abierta ? 1 : 0.4)
-                .opacity(abierta ? 1 : 0)
-                .position(x: x, y: y)
+                ruedaCompleta
+                    .scaleEffect(abierta ? 1 : 0.4)
+                    .opacity(abierta ? 1 : 0)
+                    .position(centro(en: geo))
             }
         }
         .ignoresSafeArea()
         .onAppear {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.72)) { abierta = true }
         }
+    }
+
+    /// Donde se pone la rueda: sobre el apunte, pero entera dentro de la pantalla aunque el
+    /// apunte esté en un borde.
+    private func centro(en geo: GeometryProxy) -> CGPoint {
+        let origen: CGPoint = geo.frame(in: .global).origin
+        let margen: CGFloat = radio + 50
+        let x: CGFloat = min(max(rueda.centro.x - origen.x, margen), geo.size.width - margen)
+        let y: CGFloat = min(max(rueda.centro.y - origen.y, margen), geo.size.height - margen)
+        return CGPoint(x: x, y: y)
+    }
+
+    private var ruedaCompleta: some View {
+        let lista = opciones
+        return ZStack {
+            Circle()
+                .stroke(.regularMaterial, style: StrokeStyle(lineWidth: 66))
+                .frame(width: radio * 2, height: radio * 2)
+                .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+            rotulo
+            ForEach(Array(lista.enumerated()), id: \.element.id) { indice, opcion in
+                boton(opcion)
+                    .offset(desplazamiento(indice, de: lista.count))
+            }
+        }
+    }
+
+    /// En el centro, el apunte: su cuenta y su importe.
+    private var rotulo: some View {
+        VStack(spacing: 0) {
+            Text(rueda.fila.cuenta.isEmpty ? "?" : rueda.fila.cuenta)
+                .font(.headline.monospacedDigit())
+            if let importe = rueda.fila.importe {
+                Text(Importe.formatear(importe)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func boton(_ opcion: Opcion) -> some View {
+        Button(action: opcion.accion) {
+            VStack(spacing: 2) {
+                Image(systemName: opcion.icono).font(.title3)
+                Text(opcion.titulo).font(.system(size: 9, weight: .semibold)).fixedSize()
+            }
+            .foregroundStyle(opcion.destructiva ? Color.red : Color.primary)
+            .frame(width: 60, height: 52)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(opcion.titulo)
+    }
+
+    /// Las opciones, repartidas por igual alrededor del círculo y empezando arriba.
+    private func desplazamiento(_ indice: Int, de total: Int) -> CGSize {
+        let grados: Double = -90 + 360 / Double(max(total, 1)) * Double(indice)
+        let angulo: Double = grados * Double.pi / 180
+        return CGSize(width: radio * CGFloat(cos(angulo)), height: radio * CGFloat(sin(angulo)))
     }
 
     private var opciones: [Opcion] {
