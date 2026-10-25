@@ -55,3 +55,8 @@
 - Captura de las 19:59: Vision leyó bien `1000,00 572 | 430 1000`. Fallaba la regla del Haber sin paréntesis; ahora la cuenta es el número pegado al centro (DEBUG-LOG).
 - Iulian pidió el rediseño completo (ADR-010): inicio con «+» y menú circular, histórico, apertura, panel plegable y redimensionable, zoom, zonas ajustables, rayas como separador, fecha a mano heredable, vista En limpio y recomendaciones sin bloquear.
 - Todo en `paso-0/prototipo`; el CI publica el zip para el iPad. Pendiente: que Iulian lo pruebe.
+
+## 25-10-2026 (noche, 4) — Estudio de reconocimiento
+- Captura de las 20:49: «210,00 … (472)» leído como «0,00 HJA oportado (472)» y 819 leído como 814. Además, cualquier retoque movía toda la hoja.
+- Estudio en [ESTUDIO-RECONOCIMIENTO](ESTUDIO-RECONOCIMIENTO.md) y capa 1 hecha (ADR-011): renglones por la tinta, lectura por renglón con candidatas y memoria, y la partida doble como prueba.
+- Pendiente: que Iulian lo pruebe con su letra; decidir la capa 2 (corrección con Scribble) y la 3 (Claude por API).

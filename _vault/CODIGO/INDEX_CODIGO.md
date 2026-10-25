@@ -58,3 +58,7 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Hoja/` | Hoja abierta: lectura en segundo plano, panel plegable, modo En limpio |
 | `CuadernoApp.swiftpm/Lienzo/` | Página de ancho fijo con zoom, cabecera con asas de las zonas, rayas fuera de Vision |
 | `CuadernoApp.swiftpm/Asientos/` | Panel de lo reconocido, vista En limpio, apuntes, mayor y balance |
+| `Sources/CuadernoCore/AgrupadorTrazos.swift` | Cajas de los trazos → renglones por franja (Debe, centro, Haber), siguiendo renglones torcidos y pegando comas y puntos |
+| `Sources/CuadernoCore/LectorAsientos.swift` | Ahora lee varias candidatas por renglón y usa la partida doble para elegir (`cuadrar`, `seConfunden`, `cuentaSinImporte`) |
+| `CuadernoApp.swiftpm/Lienzo/Reconocedor.swift` | Ahora lee cada renglón aparte (dos imágenes, 5 candidatas) y guarda lo leído por renglón |
+| `Tests/CuadernoCoreTests/ReconocimientoTests.swift` | La captura de las 20:49 (814/819, «0,00 … (472)»), renglones de tinta torcidos, comas y puntos |

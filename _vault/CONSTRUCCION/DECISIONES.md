@@ -61,3 +61,9 @@
 - **Nunca bloquea:** lo que no se entiende sale como recomendación («falta el Haber», «solo leo un número») y se puede seguir escribiendo.
 - **Apertura:** si el primer asiento lleva cuentas de los grupos 6 a 9, se avisa (la apertura solo reabre cuentas de balance). Es un aviso y no impide guardar el asiento.
 - Vista **«En limpio»**: la hoja con letra de apuntes, en el formato de clase.
+
+## ADR-011 · Se lee por renglones de tinta y la partida doble elige entre lecturas (25-10-2026)
+- Pedido por Iulian tras la captura de las 20:49: un retoque pequeño descuadraba la hoja. El estudio completo está en [ESTUDIO-RECONOCIMIENTO](ESTUDIO-RECONOCIMIENTO.md).
+- Los renglones se deciden con la geometría de los trazos (`AgrupadorTrazos`, en el motor), no con las cajas de Vision. Cada renglón se lee aparte, dos veces y con varias candidatas, y la lectura se guarda por renglón.
+- Si un asiento no cuadra: la candidata de Vision que lo hace cuadrar se toma avisando; una cifra parecida que Vision no propuso solo se pregunta (puede ser un error real de Iulian, y eso no se tapa); a una fila con cuenta y sin importe se le dice cuánto falta.
+- Claude por API queda como capa opcional para lo que siga sin cuadrar, pendiente de que Iulian lo apruebe.
