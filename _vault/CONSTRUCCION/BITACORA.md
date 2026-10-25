@@ -75,3 +75,16 @@
 - Prueba de las 23:11: la edición en línea funcionaba pero era incómoda.
 - Hecho (ADR-014): mini ventana de corrección con el cuadro de cuentas del PGC, apuntes que se arrastran entre asientos y lados, y fecha editable en En limpio. CI en verde.
 - Pendiente: que Iulian lo pruebe y revise los nombres del cuadro de cuentas; decidir la capa 3 (Claude por API).
+
+## 26-10-2026 — Modo práctica, rueda, mayor con diagrama y PDF
+- Iulian probó la mini ventana y el mayor y le gustaron, igual que el histórico (rescató una hoja). Pidió:
+  - PDF y zoom en En limpio;
+  - un arrastre más sencillo;
+  - la rueda al mantener un apunte;
+  - el mayor con la tabla entera, el diagrama de asientos y el salto con resaltado;
+  - el modo práctica con el enunciado en el panel.
+- Hecho (ADR-015) en `paso-0/prototipo`. CI en verde y zip publicado para el Atajo.
+- Falló la compilación de la app: el registro del CI pide iniciar sesión en GitHub. Ahora el CI saca los errores de compilación como anotación, que se lee por la API pública (DEBUG-LOG).
+- Pendiente:
+  - que Iulian lo pruebe en el iPad ([prueba 003](../PRUEBAS/2026-10-26_practica_rueda_mayor.md)), sobre todo el arrastre y los Word del enunciado;
+  - que decida si la app resuelve el ejercicio con Claude por API.

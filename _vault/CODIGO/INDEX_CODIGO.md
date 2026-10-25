@@ -75,3 +75,18 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Asientos/ApunteFila.swift` | El apunte en el panel y en En limpio: se toca para corregirlo y se arrastra por su asa; zona para soltar por asiento (izquierda Debe, derecha Haber). Sustituye a `ApunteEditable` |
 | `CuadernoApp.swiftpm/Asientos/EditorApunteMini.swift` | Mini ventana: lado, cuenta con su nombre, buscador del cuadro de cuentas, importe y ✓ |
 | `Tests/CuadernoCoreTests/CorreccionesTests.swift` | Ahora también: arrastrar a otro asiento y al otro lado, destino que desaparece y cuadro de cuentas |
+
+## Actualización 26-10-2026 — ADR-015
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/Mayor.swift` | Ahora cada movimiento dice sus contrapartidas (las cuentas del otro lado del asiento) |
+| `Sources/CuadernoCore/Revision.swift` | La corrección de una práctica: si cuadra, cuentas que no están en el PGC y lo que no se ha entendido |
+| `Tests/CuadernoCoreTests/RevisionTests.swift` | Corrección de un asiento bien, cuenta inexistente (488) frente a subcuenta (5720), descuadre y contrapartidas del mayor |
+| `CuadernoApp.swiftpm/Hoja/InteraccionHoja.swift` | Lo que pasa en pantalla y no se guarda: rueda, mini ventana, mayor abierto, salto y resaltado amarillo |
+| `CuadernoApp.swiftpm/Hoja/RuedaApunteView.swift` | La rueda del apunte (modificar, mayor, cambiar de lado, lo leído, descartar) |
+| `CuadernoApp.swiftpm/Asientos/ArrastreApunte.swift` | Arrastre al momento por el asa: dónde está cada asiento, en qué lado cae y la ficha que sigue al dedo |
+| `CuadernoApp.swiftpm/Asientos/MayorView.swift` | Mayor con diagrama de asientos, tabla entera o cuenta en T; tocar un asiento lleva a él (sale de `LibrosView`) |
+| `CuadernoApp.swiftpm/Asientos/DiarioPDF.swift` | En limpio (o la solución) en PDF A4 |
+| `CuadernoApp.swiftpm/Asientos/LimpioView.swift` | Ahora con zoom, salto con resaltado y tres usos: diario, práctica (sin cuadres) y solución |
+| `CuadernoApp.swiftpm/Practica/` | Modo práctica: importar el enunciado (`ImportadorEnunciado`), guardarlo con la hoja, lienzo de notas con las páginas debajo de la tinta, panel del enunciado y vistas de la solución |
