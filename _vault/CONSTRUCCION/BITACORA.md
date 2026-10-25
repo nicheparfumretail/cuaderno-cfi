@@ -1,0 +1,34 @@
+# Bitácora
+
+## 2026-10-24 · Arranque
+- Iulian describe la app (ver VISION) y pide montar el proyecto en `Desktop\Cuaderno-CFI` con vault de protocolos, construcción y código.
+- Revisado el entorno del PC: ver [prueba del entorno](../PRUEBAS/2026-10-24_entorno_PC.md).
+- Creado este esqueleto (sin código todavía). Sin repositorio git: se crea cuando esté `gh` instalado.
+- Decisiones registradas: ADR-001 a ADR-003.
+
+## 24-10-2026 (tarde) — iCloud descartado, CLAUDE.md escrito
+- iCloud para Windows: Finalizar → Reparar → Restablecer → reinicio. Sigue fallando; causa en el registro: `iCloudCKKS.exe` colgado al arrancar. Se descarta como vía (ADR-004).
+- Revisión de desinstalaciones de 14 días a petición de Iulian: no se perdió ninguna dependencia del sistema; solo desapareció OpenAI Codex (21-22/10). El espacio liberado lo explica el Sensor de almacenamiento.
+- Escrito `CLAUDE.md`: entorno sin Mac, formato `.swiftpm`, reglas del motor (Decimal, partida doble, códigos PGC), bucle con CI, git por ramas y PR sin fusionar a `main` sin permiso, cierre de sesión en el vault.
+- Lección: se perdió más de media hora peleando con iCloud cuando no era imprescindible. Ante una pieza de infraestructura que falla y tiene sustituto, probar el sustituto antes de depurar.
+
+## 24-10-2026 (noche) — iCloud para Windows: diagnóstico a fondo (sin resolver)
+- Causa 1, resuelta: `C:\ProgramData\Apple Computer\iTunes\adi` la creó en feb-2025 la cuenta de Windows «usuario»; «Learning» no podía modificarla, así que el registro del PC ante Apple (anisette) fallaba. Se movió con UAC a `Escritorio\_papelera\icloud-adi-2026-10-24\adi`; iCloud la recreó a nombre de Learning.
+- Causa 2, sin resolver y del lado de Apple: con el registro de diagnóstico se vio que, al iniciar sesión, AuthKit pide un token push (`com.apple.idmsauth`). APSDaemon no tiene certificado; lo pide a `albert.apple.com/.../deviceActivation?device=Windows`, Apple responde **sin certificado** («Failed to get client cert»). Sin token, a los ~55 s sale `AKValidateAppleIDCredentials -9106` = «no se ha inicializado en su totalidad». Pasa igual por la wifi de casa y por el punto de acceso del iPhone: no es la red.
+- Descartado: red/puertos/DNS/IPv6, almacén de certificados (escribible), raíz de Apple en Windows (no aplica), contraseña.
+- Revertido lo que no ayudó: carpetas `SC Info` restauradas, registro de diagnóstico desactivado. La clave vieja `APNSDaemon` queda en la papelera (iCloud generó una nueva).
+- Lección: sin registro de diagnóstico se probaron hipótesis a ciegas durante una hora. Para apps de Apple en Windows, activar primero `defaults write APSDaemon.exe ShouldLog YES` dentro del paquete (`Invoke-CommandInDesktopPackage`) y leer el log antes de tocar nada.
+- iCloud no es necesario para este proyecto (ADR-004): código por GitHub + Working Copy; archivos sueltos por icloud.com.
+- Prueba final desde la cuenta de Windows «usuario» (19:30, carpeta adi limpia a su nombre): APSDaemon vuelve a pedir el certificado a albert y no conecta nunca al servidor de avisos. **Mismo fallo con otro usuario y otra red → es del PC ante Apple, no del perfil.** Se cierra iCloud para Windows. La carpeta adi de Learning queda restaurada; la de «usuario» está en la papelera.
+- Decisión: las notas del iPad pasan por **Google Drive** (carpeta compartida). Claude la lee directamente con el conector, aunque el PC esté apagado.
+- 24-10 (20:10): caso abierto con Soporte de Apple (Kelvin y Kevin). Hechos sus pasos (desinstalar, Store sin sesión, reiniciar, reinstalar): la 13.4 responde «Update iCloud for Windows to the latest version to sign in»; actualizada a la 15.10 (la Store no actualizaba porque la 13.4 seguía abierta). **Llamada de Apple: domingo 25-10 a las 11:00** (en Google Calendar).
+
+## 25-10-2026 — Prototipo inicial en código (Claude Code en el PC)
+- Iulian pide montar el prototipo mientras come. Hecho en la rama `paso-0/prototipo` (sin repositorio en GitHub todavía).
+- **Motor `CuadernoCore`** (Swift puro): Cuenta, Apunte, Asiento con partida doble, Diario, Mayor, Balance de comprobación, mapeo a EBITDA como tabla, importes en `Decimal` con redondeo mitad hacia arriba y formato del cuaderno («1.185,80»).
+- **Datos de prueba = el caso Túria completo** (63 asientos), generados desde `Vault-Iulian/Contabilidad/CFI_Caso_repaso_Turia_libro_diario.md`. Antes de generarlos se comprobó con un script que los 63 cuadran y que los saldos finales coinciden con la «Comprobación final» de la nota (572 = 36.775,20; 4315 = 8.591; 4751.1 = 992,50 acreedor…).
+- **App `CuadernoApp.swiftpm`**: lienzo PencilKit con la paleta de Notas, plantilla Debe | Cuenta | Haber, botón «Pasar a limpio» (Vision lee lo escrito y lo convierte en apuntes para revisar), editor que avisa del descuadre y del impacto en el EBITDA, diario en limpio, mayor en T al mantener pulsada una cuenta, balance de comprobación, exportar JSON y «Cargar el caso Túria».
+- **Visor del PC** (`visor-pc/index.html`): abre el `diario.json` exportado; Diario, Mayor y Balance. Probado en el navegador con el caso Túria: saldos y cuadre iguales que en la nota.
+- **CI** (`.github/workflows/ci.yml`): Linux pasa los tests del motor; macOS compila la app; un paso comprueba que la copia del motor en la app está al día.
+- **Sin verificar:** no hay compilador de Swift en el PC (ni WSL ni Docker). Nada está «hecho» hasta que el CI salga en verde (CLAUDE.md §6) y Iulian lo pruebe en el iPad.
+- Decisiones nuevas: ADR-005, ADR-006 y ADR-007.
