@@ -35,3 +35,13 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Core/` | Copia del motor (ADR-005); se regenera con `py scripts/sincronizar_core.py` |
 | `visor-pc/index.html` | Visor del diario en el PC (ADR-006) |
 | `.github/workflows/ci.yml` | CI: tests del motor en Linux, copia al día y compilación de la app en macOS |
+
+## Actualización 25-10-2026 (noche) — ADR-008
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/LectorAsientos.swift` | Palabras con posición → asientos en el formato de Gema (fecha, Debe/Haber por mitad, código entre paréntesis, importe) |
+| `Tests/CuadernoCoreTests/LectorAsientosTests.swift` | El ejemplo de la foto de Iulian y confusiones típicas de la letra (S→5, o→0, fecha troceada) |
+| `CuadernoApp.swiftpm/Asientos/HojaView.swift` | Diario en limpio de la hoja, en vivo, con cuadre y lo no leído en rojo |
+| `CuadernoApp.swiftpm/Lienzo/Reconocedor.swift` | Ahora solo convierte tinta en palabras con posición (Vision) |
+| ~~`Asientos/Borrador.swift`, `Asientos/EditorAsientoView.swift`~~ | Eliminados: ya no hay formulario |

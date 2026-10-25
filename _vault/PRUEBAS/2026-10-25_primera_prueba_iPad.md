@@ -21,3 +21,18 @@ Rellena la columna «Resultado» con ✅, ❌ o lo que hayas visto.
 | 12 | Cerrar la app y volver a abrirla | El lienzo y el diario siguen ahí | |
 
 **Qué apuntar si algo falla:** el número de la fila, una foto o captura y el texto exacto del error. Con eso, Claude Code lo arregla.
+
+## Resultado (25-10-2026, noche)
+- 1 ✅ La app arranca.
+- 4 ❌ «1000» + «572» no se leyó («no lo he entendido»), y el formato no era el de clase. → Rehecho en ADR-008; la prueba se repite con el nuevo formato (abajo).
+- Swift Playgrounds se colgó al cerrarlo a la fuerza desde la vista de apps.
+
+## Prueba 002b · Lienzo en el formato de Gema (pendiente)
+| # | Qué hacer | Qué debería pasar | Resultado |
+|---|---|---|---|
+| 1 | Escribir `01/12/24` en la franja del centro | Nada aún (sin apuntes) | |
+| 2 | Debajo: `1.000,00 Proveedores (400)` a la izquierda, `a` en el centro, `(572) Bancos 1.000,00` a la derecha. Esperar 2 s | A la derecha: Nº 1 · 01/12/2024, 400 al Debe y 572 al Haber, «Cuadra» en verde | |
+| 3 | Cambiar el Haber a `900,00` (borrar y reescribir) | «No cuadra… Faltan 100 en el Haber» en naranja | |
+| 4 | Escribir `02/12/24` más abajo y otro asiento | Aparece como Nº 2 | |
+| 5 | Mantener pulsada (572) en el panel | Mayor en T de Bancos | |
+| 6 | ··· → Ver ejemplo: caso Túria | Los 63 asientos de Túria | |

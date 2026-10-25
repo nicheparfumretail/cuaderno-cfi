@@ -38,3 +38,10 @@
 - Primer CI (run 40205942121) en verde a la primera: tests del motor en Linux, copia del motor al día y compilación de la app en macOS. Queda resuelto el riesgo de que `AppleProductTypes` no compilase con `xcodebuild`.
 - Pendiente: pull request de `paso-0/prototipo` → `main`, y la primera prueba en el iPad ([PRUEBAS](../PRUEBAS/2026-10-25_primera_prueba_iPad.md)).
 - El conector de GitHub de Claude no conecta (su servidor no admite el registro de clientes) y `gh` no está instalado: la subida se hizo con git + Git Credential Manager.
+
+## 25-10-2026 (noche) — Primera prueba en el iPad y lienzo rehecho
+- **La app arrancó en el iPad** (Working Copy → Swift Playgrounds → ▶).
+- Lo que no funcionó: la plantilla de tres columnas no se parecía al papel de clase, el reconocimiento no leyó «1000 / 572» («no lo he entendido») y el botón «Pasar a limpio» + formulario sobraban. Swift Playgrounds se colgó al cerrarlo a la fuerza.
+- Iulian mandó una foto del formato que usa siempre (apuntes de Gema): fecha en el centro sobre la raya; Debe a la izquierda «importe · nombre · (nº)»; «a» en el centro; Haber a la derecha «(nº) · nombre · importe».
+- Rehecho (ADR-008): `LectorAsientos` en el motor, con tests construidos a partir de la foto; la app lee la hoja al dejar de escribir y enseña el diario en vivo a la derecha.
+- Pendiente: decidir la rama fija `ipad` + automatización de Atajos para que Working Copy actualice solo al abrir Swift Playgrounds.

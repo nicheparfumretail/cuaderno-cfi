@@ -37,3 +37,9 @@
 - Cierra, para la fase 1, la pregunta abierta «Reconocimiento».
 - La posición dice el lado: lo escrito en la columna izquierda es Debe; en la central, la cuenta; en la derecha, Haber. Cada fila es un apunte. Lo que Vision no entiende no se inventa: se enseña en el editor para corregirlo a mano.
 - Claude por API queda para cuando se vea en la práctica qué falla con Vision.
+
+## ADR-008 · El lienzo se lee en el formato de Gema y se pasa a limpio solo (25-10-2026)
+- Sustituye la plantilla de tres columnas de ADR-007 (lo de usar Vision en el iPad se mantiene).
+- Formato (foto de Iulian): la **fecha en el centro abre cada asiento**; **mitad izquierda = Debe** («1.000,00 Proveedores (400)»); **mitad derecha = Haber** («(572) Bancos 1.000,00»); la «a» va en el centro. El código de cuenta va entre paréntesis; el nombre se ignora porque manda el código.
+- La lectura (posiciones → asientos) vive en el motor (`LectorAsientos`) y tiene tests; la app solo pasa la tinta por Vision.
+- Sin botón: la hoja se relee entera 1,2 s después del último trazo. Los asientos que cuadran forman el diario; lo que no se entiende sale en rojo y se corrige reescribiendo en la tinta.
