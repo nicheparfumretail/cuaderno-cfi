@@ -7,12 +7,19 @@ public struct PalabraLeida: Hashable, Sendable {
     public var x: Double
     public var y: Double
     public var alto: Double
+    /// Otras lecturas del mismo trozo de tinta, de más a menos probable («819,00» si leyó «814,00»).
+    public var alternativas: [String]
+    /// El renglón de tinta al que pertenece, cuando los trazos se agruparon antes de leer.
+    public var renglon: Int?
 
-    public init(_ texto: String, x: Double, y: Double, alto: Double = 30) {
+    public init(_ texto: String, x: Double, y: Double, alto: Double = 30,
+                alternativas: [String] = [], renglon: Int? = nil) {
         self.texto = texto
         self.x = x
         self.y = y
         self.alto = alto
+        self.alternativas = alternativas
+        self.renglon = renglon
     }
 }
 
@@ -24,16 +31,19 @@ public struct AsientoLeido: Hashable, Codable, Sendable {
     public var noEntendido: [String] = []
     /// Lo escrito en el centro que no se ha podido leer como fecha (se elige a mano en el panel).
     public var fechaIlegible: [String] = []
+    /// Lo deducido con la partida doble: una lectura corregida o el importe que haría cuadrar.
+    public var pistas: [String] = []
 
     public init(fecha: Fecha? = nil, apuntes: [Apunte] = [], noEntendido: [String] = [],
-                fechaIlegible: [String] = []) {
+                fechaIlegible: [String] = [], pistas: [String] = []) {
         self.fecha = fecha
         self.apuntes = apuntes
         self.noEntendido = noEntendido
         self.fechaIlegible = fechaIlegible
+        self.pistas = pistas
     }
 
-    private enum CodingKeys: String, CodingKey { case fecha, apuntes, noEntendido, fechaIlegible }
+    private enum CodingKeys: String, CodingKey { case fecha, apuntes, noEntendido, fechaIlegible, pistas }
 
     /// Tolerante con hojas guardadas por versiones anteriores, que no tenían todos los campos.
     public init(from decoder: Decoder) throws {
@@ -41,7 +51,8 @@ public struct AsientoLeido: Hashable, Codable, Sendable {
         self.init(fecha: try c.decodeIfPresent(Fecha.self, forKey: .fecha),
                   apuntes: try c.decodeIfPresent([Apunte].self, forKey: .apuntes) ?? [],
                   noEntendido: try c.decodeIfPresent([String].self, forKey: .noEntendido) ?? [],
-                  fechaIlegible: try c.decodeIfPresent([String].self, forKey: .fechaIlegible) ?? [])
+                  fechaIlegible: try c.decodeIfPresent([String].self, forKey: .fechaIlegible) ?? [],
+                  pistas: try c.decodeIfPresent([String].self, forKey: .pistas) ?? [])
     }
 
     /// Sin apuntes ni filas por corregir: no hay asiento (una raya de más, una fecha suelta).
@@ -65,15 +76,23 @@ public struct AsientoLeido: Hashable, Codable, Sendable {
 /// horizontal separa un asiento del siguiente; una fecha en el centro, también. En cada fila,
 /// el código de la cuenta va entre paréntesis o pegado al centro, y el importe en el borde.
 /// El nombre de la cuenta se ignora: manda el código.
+///
+/// Si un asiento no cuadra, la partida doble sirve de prueba: entre las otras lecturas de la
+/// tinta se busca la que lo hace cuadrar (ver `cuadrar`).
 public enum LectorAsientos {
-    private enum Zona: Int { case debe, centro, haber }
-
     private struct Fila {
-        let zona: Zona
+        let zona: ZonaPagina
         let palabras: [PalabraLeida]
         var y: Double { palabras.map(\.y).reduce(0, +) / Double(palabras.count) }
         var alto: Double { palabras.map(\.alto).max() ?? 0 }
         var texto: String { palabras.sorted { $0.x < $1.x }.map(\.texto).joined(separator: " ") }
+        var lado: Lado { zona == .debe ? .debe : .haber }
+    }
+
+    /// Una fila del Debe o del Haber que no se ha podido leer como apunte.
+    struct Fallida {
+        let lado: Lado
+        let cuenta: String?
     }
 
     /// Lo que se encuentra al bajar por la hoja: una fila de texto o una raya.
@@ -89,15 +108,14 @@ public enum LectorAsientos {
     public static func leer(_ palabras: [PalabraLeida], separadores: [Double] = [],
                             zonas: Zonas = Zonas()) -> [AsientoLeido] {
         var eventos: [(altura: Double, orden: Int, evento: Evento)] = []
-        for zona in [Zona.debe, .centro, .haber] {
-            var grupos = agruparEnFilas(palabras.filter { self.zona(de: $0, zonas: zonas) == zona })
+        for zona in [ZonaPagina.debe, .centro, .haber] {
+            var grupos = agruparEnFilas(palabras.filter { zonas.zona(de: $0.x) == zona })
             if zona != .centro {
                 grupos = unirRenglonesPartidos(grupos, lado: zona == .debe ? .debe : .haber, separadores: separadores)
             }
             for grupo in grupos {
                 let fila = Fila(zona: zona, palabras: grupo)
-                let leida = numerico(fila.texto)
-                let fecha = zona == .centro ? (self.fecha(en: leida) ?? fechaConBarrasLeidasComoUnos(en: leida)) : nil
+                let fecha = zona == .centro ? lecturas(grupo).lazy.compactMap(fechaEscrita).first : nil
                 // La fecha va en la raya, un poco por encima de sus apuntes: se adelanta un renglón
                 // para que abra su asiento antes que las filas que tiene a la misma altura.
                 let altura = fila.y - (fecha != nil ? fila.alto : 0)
@@ -111,14 +129,19 @@ public enum LectorAsientos {
 
         var asientos: [AsientoLeido] = []
         var actual = AsientoLeido()
+        // Por cada apunte, las otras lecturas que dio la tinta; y las filas que no se entendieron.
+        var dudas: [[Apunte]] = []
+        var fallidas: [Fallida] = []
         func cerrar() {
             if actual.vacio {
                 // Una fecha escrita justo encima de la raya sigue valiendo para el asiento de debajo.
                 actual = AsientoLeido(fecha: actual.fecha)
             } else {
-                asientos.append(enOrden(actual))
+                asientos.append(enOrden(cuadrar(actual, dudas: dudas, fallidas: fallidas)))
                 actual = AsientoLeido()
             }
+            dudas = []
+            fallidas = []
         }
 
         for (_, _, evento) in eventos {
@@ -127,23 +150,142 @@ public enum LectorAsientos {
                 continue
             }
             let texto = fila.texto
-            // Filas sin números («Debe», «Haber», un título, la «a»): no son apuntes, se ignoran.
-            guard texto.contains(where: { $0.isNumber }) else { continue }
             if let fecha {
                 if !actual.vacio { cerrar() }
                 actual.fecha = fecha
                 continue
             }
+            // La primera lectura que es un apunte; las demás quedan como dudas para cuadrar.
+            let opciones = fila.zona == .centro ? []
+                : lecturas(fila.palabras).compactMap { apunte(en: numerico($0), lado: fila.lado) }
+            if let elegido = opciones.first {
+                actual.apuntes.append(elegido)
+                dudas.append(opciones.filter { $0.cuenta == elegido.cuenta && $0.importe != elegido.importe })
+                continue
+            }
+            // Filas sin números («Debe», «Haber», un título, la «a»): no son apuntes, se ignoran.
+            guard texto.contains(where: { $0.isNumber }) else { continue }
             if fila.zona == .centro {
                 actual.fechaIlegible.append(texto)
-            } else if let nuevo = apunte(en: numerico(texto), lado: fila.zona == .debe ? .debe : .haber) {
-                actual.apuntes.append(nuevo)
             } else {
                 actual.noEntendido.append(texto)
+                fallidas.append(Fallida(lado: fila.lado, cuenta: cuentaSinImporte(numerico(texto))))
             }
         }
-        if !actual.vacio { asientos.append(enOrden(actual)) }
+        if !actual.vacio { asientos.append(enOrden(cuadrar(actual, dudas: dudas, fallidas: fallidas))) }
         return asientos
+    }
+
+    /// La lectura más probable de unas palabras y, detrás, las alternativas: cada una cambia un solo trozo.
+    static func lecturas(_ palabras: [PalabraLeida]) -> [String] {
+        let ordenadas = palabras.sorted { $0.x < $1.x }
+        let textos = ordenadas.map(\.texto)
+        var lista = [textos.joined(separator: " ")]
+        for (i, palabra) in ordenadas.enumerated() {
+            for alternativa in palabra.alternativas {
+                var cambiados = textos
+                cambiados[i] = alternativa
+                let lectura = cambiados.joined(separator: " ")
+                if !lista.contains(lectura) { lista.append(lectura) }
+            }
+        }
+        return lista
+    }
+
+    // MARK: - La partida doble como prueba
+
+    /// Si el asiento no cuadra, busca la lectura que lo hace cuadrar:
+    /// - una fila con cuenta y sin importe: se dice qué importe haría falta;
+    /// - una cifra en la que Vision dudó: se toma la otra lectura, y se avisa;
+    /// - una cifra parecida (4 y 9, 1 y 7…) que Vision no propuso: solo se pregunta. Puede ser un
+    ///   error de verdad al escribir, y eso es justo lo que hay que ver al estudiar.
+    static func cuadrar(_ leido: AsientoLeido, dudas: [[Apunte]], fallidas: [Fallida]) -> AsientoLeido {
+        var resultado = leido
+        let debe = leido.apuntes.map(\.debe).reduce(0, +)
+        let haber = leido.apuntes.map(\.haber).reduce(0, +)
+        // Positivo: falta en el Debe; negativo: falta en el Haber.
+        let falta = haber - debe
+        guard falta != 0 else { return resultado }
+        let ladoCorto: Lado = falta > 0 ? .debe : .haber
+        let cuanto = falta > 0 ? falta : -falta
+
+        if !fallidas.isEmpty {
+            let sinImporte = fallidas.filter { $0.lado == ladoCorto && $0.cuenta != nil }
+            if sinImporte.count == 1, let cuenta = sinImporte[0].cuenta {
+                resultado.pistas.append("Para que cuadre, la \(cuenta) tendría que llevar \(Importe.formatear(cuanto)).")
+            }
+            return resultado
+        }
+        guard debe > 0, haber > 0 else { return resultado }
+        func arregla(_ nuevo: Decimal, _ apunte: Apunte) -> Bool {
+            nuevo - apunte.importe == (apunte.lado == .debe ? falta : -falta)
+        }
+
+        var arreglos: [(indice: Int, apunte: Apunte)] = []
+        for (i, apunte) in leido.apuntes.enumerated() where i < dudas.count {
+            if let bueno = dudas[i].first(where: { arregla($0.importe, apunte) }) {
+                arreglos.append((i, bueno))
+            }
+        }
+        if arreglos.count == 1, let arreglo = arreglos.first {
+            let antes = Importe.formatear(leido.apuntes[arreglo.indice].importe)
+            let despues = Importe.formatear(arreglo.apunte.importe)
+            resultado.apuntes[arreglo.indice] = arreglo.apunte
+            resultado.pistas.append("En la \(arreglo.apunte.cuenta) dudaba entre \(antes) y \(despues): "
+                + "tomo \(despues), que es lo que hace cuadrar el asiento. Compruébalo.")
+            return resultado
+        }
+        guard arreglos.isEmpty else { return resultado }
+
+        var preguntas: [String] = []
+        for apunte in leido.apuntes {
+            let objetivo = apunte.importe + (apunte.lado == .debe ? falta : -falta)
+            guard objetivo > 0, seConfunden(apunte.importe, objetivo) else { continue }
+            let (escrito, cuadra) = (Importe.formatear(apunte.importe), Importe.formatear(objetivo))
+            preguntas.append("¿En la \(apunte.cuenta) pone \(cuadra) y no \(escrito)? Con \(cuadra) cuadra.")
+        }
+        if (1...2).contains(preguntas.count) { resultado.pistas += preguntas }
+        return resultado
+    }
+
+    /// Cifras que se confunden al escribir a mano o al leerlas.
+    private static let parecidas: Set<String> = [
+        "17", "49", "38", "56", "06", "08", "09", "27", "68", "35", "14", "23", "58", "89",
+    ]
+
+    /// Dos importes que solo se diferencian en una cifra parecida, o en una cifra que no se
+    /// leyó («10» por «210»).
+    static func seConfunden(_ a: Decimal, _ b: Decimal) -> Bool {
+        let x = Array(centimos(a)), y = Array(centimos(b))
+        if x.count == y.count {
+            let distintas = x.indices.filter { x[$0] != y[$0] }
+            guard distintas.count == 1, let i = distintas.first else { return false }
+            return parecidas.contains(String([x[i], y[i]].sorted()))
+        }
+        let (corta, larga) = x.count < y.count ? (x, y) : (y, x)
+        guard larga.count == corta.count + 1 else { return false }
+        return larga.indices.contains { i in
+            var sin = larga
+            sin.remove(at: i)
+            return sin == corta
+        }
+    }
+
+    /// 819,00 → "81900": las cifras del importe en céntimos, sin separadores.
+    private static func centimos(_ importe: Decimal) -> String {
+        "\(Importe.redondear(importe) * 100)".split(separator: ".").first.map(String.init) ?? ""
+    }
+
+    /// Una fila que no es apunte pero sí trae una cuenta: le falta el importe o lo trae a cero.
+    public static func cuentaSinImporte(_ texto: String) -> String? {
+        var resto = texto
+        if let codigo = extraerCodigoEntreParentesis(de: &resto) { return codigo }
+        let numeros = trozosNumericos(texto)
+        guard numeros.count >= 2, let primero = numeros.first, let ultimo = numeros.last else { return nil }
+        for (codigo, otro) in [(ultimo, primero), (primero, ultimo)] where Cuenta(codigo) != nil {
+            if (Importe.leer(otro) ?? 0) <= 0 { return codigo }
+        }
+        return nil
     }
 
     /// Un nombre largo («Compras de / mercaderías») ocupa dos renglones y la cuenta puede quedar en
@@ -154,8 +296,7 @@ public enum LectorAsientos {
                                               separadores: [Double]) -> [[PalabraLeida]] {
         let conCifras = renglones.filter { $0.contains { $0.texto.contains(where: { $0.isNumber }) } }
         func esApunte(_ palabras: [PalabraLeida]) -> Bool {
-            let texto = palabras.sorted { $0.x < $1.x }.map(\.texto).joined(separator: " ")
-            return apunte(en: numerico(texto), lado: lado) != nil
+            lecturas(palabras).contains { apunte(en: numerico($0), lado: lado) != nil }
         }
         func centro(_ palabras: [PalabraLeida]) -> Double {
             palabras.map(\.y).reduce(0, +) / Double(palabras.count)
@@ -194,17 +335,13 @@ public enum LectorAsientos {
         return ordenado
     }
 
-    private static func zona(de palabra: PalabraLeida, zonas: Zonas) -> Zona {
-        if palabra.x < zonas.finDebe { return .debe }
-        if palabra.x > zonas.inicioHaber { return .haber }
-        return .centro
-    }
-
-    /// Agrupa en filas las palabras cuya altura se solapa.
+    /// Agrupa en filas las palabras cuya altura se solapa. Si ya vienen con su renglón de tinta,
+    /// manda el renglón.
     private static func agruparEnFilas(_ palabras: [PalabraLeida]) -> [[PalabraLeida]] {
-        var filas: [[PalabraLeida]] = []
-        for palabra in palabras.sorted(by: { $0.y < $1.y }) {
-            if let ultima = filas.last {
+        var filas = Array(Dictionary(grouping: palabras.filter { $0.renglon != nil }, by: { $0.renglon ?? 0 }).values)
+        let porRenglon = filas.count
+        for palabra in palabras.filter({ $0.renglon == nil }).sorted(by: { $0.y < $1.y }) {
+            if filas.count > porRenglon, let ultima = filas.last {
                 let centro = ultima.map(\.y).reduce(0, +) / Double(ultima.count)
                 let tolerancia = max(ultima.map(\.alto).max() ?? 0, palabra.alto) * 0.6
                 if abs(palabra.y - centro) < tolerancia {
@@ -214,7 +351,14 @@ public enum LectorAsientos {
             }
             filas.append([palabra])
         }
-        return filas
+        func centro(_ fila: [PalabraLeida]) -> Double { fila.map(\.y).reduce(0, +) / Double(fila.count) }
+        return filas.sorted { centro($0) < centro($1) }
+    }
+
+    /// Una fecha en cualquiera de sus formas, también con las barras leídas como unos.
+    private static func fechaEscrita(_ texto: String) -> Fecha? {
+        let leida = numerico(texto)
+        return fecha(en: leida) ?? fechaConBarrasLeidasComoUnos(en: leida)
     }
 
     /// "01/12/24", "01 / 12 / 2024", "1-12-24"

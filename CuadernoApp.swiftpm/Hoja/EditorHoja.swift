@@ -60,7 +60,7 @@ final class EditorHoja: ObservableObject {
 
     private func leer() async {
         leyendo = true
-        let tinta = await Reconocedor.leer(dibujo, anchoPagina: EditorHoja.anchoPagina)
+        let tinta = await Reconocedor.leer(dibujo, anchoPagina: EditorHoja.anchoPagina, zonas: hoja.datos.zonas)
         leyendo = false
         guard !Task.isCancelled else { return }
         hoja.leidos = LectorAsientos.leer(tinta.palabras, separadores: tinta.separadores, zonas: hoja.datos.zonas)

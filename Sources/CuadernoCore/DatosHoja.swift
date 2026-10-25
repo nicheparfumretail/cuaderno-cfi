@@ -83,7 +83,9 @@ public struct DatosHoja: Codable, Hashable, Sendable {
     public static func sugerencias(_ leido: AsientoLeido) -> [String] {
         var lista: [String] = []
         for fila in leido.noEntendido {
-            if LectorAsientos.trozosNumericos(LectorAsientos.numerico(fila)).count < 2 {
+            if let cuenta = LectorAsientos.cuentaSinImporte(LectorAsientos.numerico(fila)) {
+                lista.append("En «\(fila)» leo la cuenta \(cuenta) pero no un importe: repasa las cifras del borde.")
+            } else if LectorAsientos.trozosNumericos(LectorAsientos.numerico(fila)).count < 2 {
                 lista.append("En «\(fila)» solo leo un número: la cuenta va pegada al centro y el importe en el borde.")
             } else {
                 lista.append("En «\(fila)» no encuentro una cuenta válida (3 cifras o más, sin empezar por 0).")
@@ -92,6 +94,7 @@ public struct DatosHoja: Codable, Hashable, Sendable {
         for texto in leido.fechaIlegible {
             lista.append("En el centro leo «\(texto)» y no es una fecha: elígela con el selector de fecha.")
         }
+        lista += leido.pistas
         let hayDebe = leido.apuntes.contains { $0.lado == .debe }
         let hayHaber = leido.apuntes.contains { $0.lado == .haber }
         if hayDebe && !hayHaber {
