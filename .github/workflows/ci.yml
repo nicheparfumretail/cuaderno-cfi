@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  motor:
+    name: Motor contable (Linux · swift test)
+    runs-on: ubuntu-latest
+    container: swift:6.0-jammy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests del motor
+        run: swift test
+
+  copia:
+    name: La app lleva el motor al día
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comparar Sources/CuadernoCore con CuadernoApp.swiftpm/Core
+        run: python3 scripts/sincronizar_core.py --comprobar
+
+  app:
+    name: App de iPad (macOS · xcodebuild)
+    runs-on: macos-15
+    needs: copia
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versión de Xcode
+        run: xcodebuild -version
+      - name: Esquemas del paquete
+        working-directory: CuadernoApp.swiftpm
+        run: xcodebuild -list
+      - name: Compilar para el simulador de iPad
+        working-directory: CuadernoApp.swiftpm
+        run: |
+          xcodebuild build \
+            -scheme "Cuaderno CFI" \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO
