@@ -60,6 +60,11 @@ struct PaginaEnunciado: Codable, Hashable, Identifiable {
     /// Tamaño de la imagen en píxeles: da la proporción de la página.
     let ancho: Double
     let alto: Double
+    /// Dónde está y qué ancho tiene en el enunciado, en puntos de página (se puede mover y
+    /// redimensionar). Las hojas de antes no lo guardaban: sus páginas van una debajo de otra.
+    var x: Double?
+    var y: Double?
+    var anchoMostrado: Double?
 }
 
 /// Las hojas guardadas: una por archivo en Documentos/hojas, la más reciente primero. Las

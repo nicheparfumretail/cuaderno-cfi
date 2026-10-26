@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 /// Las notas sobre el enunciado de una práctica: las páginas detrás y un lienzo de PencilKit
 /// transparente delante. El dedo mueve y amplía (hasta ×4, para leer la letra pequeña); el
 /// Pencil escribe encima de las páginas o en los márgenes. Manteniendo el dedo se pega una
-/// captura o un PDF copiados.
+/// captura o un PDF copiados. Tocando una página con el dedo se elige para moverla,
+/// redimensionarla o quitarla (ver `EdicionPaginas.swift`).
 struct LienzoNotasView: UIViewRepresentable {
     @ObservedObject var editor: EditorHoja
     let paleta: PKToolPicker
@@ -39,6 +40,7 @@ struct LienzoNotasView: UIViewRepresentable {
         paleta.setVisible(true, forFirstResponder: vista)
         paleta.addObserver(canvas)
         coordinador.version = editor.versionNotas
+        coordinador.prepararEdicion(vista)
         vista.alPegar = pegar
         return vista
     }
@@ -66,7 +68,15 @@ struct LienzoNotasView: UIViewRepresentable {
         var version = 0
         private var anchoEncajado: CGFloat = 0
         /// Una vista de imagen por página, detrás del lienzo.
-        private var vistas: [UUID: UIImageView] = [:]
+        var vistas: [UUID: UIImageView] = [:]
+        /// El orden en que están puestas las vistas (la última, delante).
+        var ordenPuesto: [UUID] = []
+        /// La página elegida con el dedo para moverla, redimensionarla o quitarla.
+        var seleccionada: UUID?
+        /// La página que se está arrastrando ahora mismo.
+        var gesto: GestoPagina?
+        /// Mientras se arrastra una página, lo escrito encima va aparte y el lienzo no está entero.
+        var moviendoTinta = false
 
         init(editor: EditorHoja, paleta: PKToolPicker) {
             self.editor = editor
@@ -96,12 +106,15 @@ struct LienzoNotasView: UIViewRepresentable {
 
         /// Pone cada página en su sitio según el zoom y el desplazamiento del lienzo, en el mismo
         /// instante en que se mueve, y carga solo las que están cerca de la pantalla (las demás
-        /// sueltan la imagen para no llenar la memoria).
+        /// sueltan la imagen para no llenar la memoria). La que se arrastra va donde está el dedo.
         func colocarPaginas(_ canvas: PKCanvasView) {
             guard let contenedor = canvas.superview as? VistaEnunciado else { return }
             let zoom = canvas.zoomScale
-            // Las páginas van en coordenadas del contenido: el fondo se mueve como el lienzo.
+            let escala = CGAffineTransform(scaleX: zoom, y: zoom)
+            // Las páginas y el marco de la elegida van en coordenadas del contenido: se mueven
+            // como el lienzo.
             contenedor.paginas.bounds.origin = canvas.contentOffset
+            contenedor.seleccion.bounds.origin = canvas.contentOffset
             let cerca = CGRect(origin: canvas.contentOffset, size: canvas.bounds.size)
                 .insetBy(dx: 0, dy: -canvas.bounds.height)
             let colocadas = editor.paginasColocadas
@@ -110,16 +123,36 @@ struct LienzoNotasView: UIViewRepresentable {
                 vista.removeFromSuperview()
                 vistas[id] = nil
             }
+            if let id = seleccionada, !presentes.contains(id) { seleccionada = nil }
+            var marcoElegida: CGRect?
             for colocada in colocadas {
-                let marco = colocada.marco.applying(CGAffineTransform(scaleX: zoom, y: zoom))
-                let vista = vistas[colocada.pagina.id] ?? nuevaVista(en: contenedor.paginas, para: colocada.pagina.id)
+                let id = colocada.pagina.id
+                let enPagina = gesto?.pagina == id ? (gesto?.actual ?? colocada.marco) : colocada.marco
+                let marco = enPagina.applying(escala)
+                let vista = vistas[id] ?? nuevaVista(en: contenedor.paginas, para: id)
                 if vista.frame != marco { vista.frame = marco }
                 if marco.intersects(cerca) {
                     if vista.image == nil { vista.image = editor.imagen(de: colocada.pagina) }
                 } else if vista.image != nil {
                     vista.image = nil
                 }
+                if id == seleccionada { marcoElegida = marco }
             }
+            ordenar(colocadas.map(\.pagina.id), en: contenedor.paginas)
+            if let gesto = gesto, let tinta = gesto.tinta {
+                let cambio = EditorHoja.transformacion(de: gesto.inicial, a: gesto.actual)
+                tinta.frame = gesto.marcoTinta.applying(cambio).applying(escala)
+            }
+            contenedor.seleccion.mostrar(marcoElegida)
+        }
+
+        /// Las vistas de las páginas, en el orden del enunciado: la última, delante.
+        private func ordenar(_ orden: [UUID], en fondo: UIView) {
+            guard orden != ordenPuesto, gesto == nil else { return }
+            for id in orden {
+                if let vista = vistas[id] { fondo.bringSubviewToFront(vista) }
+            }
+            ordenPuesto = orden
         }
 
         private func nuevaVista(en fondo: UIView, para id: UUID) -> UIImageView {
@@ -134,13 +167,19 @@ struct LienzoNotasView: UIViewRepresentable {
         }
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            guard !moviendoTinta else { return }
             editor.notasCambiadas(canvasView.drawing)
             ajustarContenido(canvasView)
         }
 
-        /// Al empezar a escribir aquí, la paleta del Pencil pasa a este lienzo.
+        /// Al empezar a escribir aquí, la paleta del Pencil pasa a este lienzo y se suelta la
+        /// página elegida.
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
             if !canvasView.isFirstResponder { canvasView.becomeFirstResponder() }
+            if seleccionada != nil && gesto == nil {
+                seleccionada = nil
+                colocarPaginas(canvasView)
+            }
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
@@ -155,11 +194,13 @@ struct LienzoNotasView: UIViewRepresentable {
     }
 }
 
-/// El panel de notas por dentro: las páginas detrás y el lienzo delante, del mismo tamaño.
-/// Manteniendo el dedo sale el menú del sistema con «Pegar» (sin el aviso de permiso de pegar).
+/// El panel de notas por dentro: las páginas detrás, el lienzo delante y, encima de todo, el
+/// marco de la página elegida (que deja pasar el Pencil). Manteniendo el dedo sale el menú del
+/// sistema con «Pegar» (sin el aviso de permiso de pegar).
 final class VistaEnunciado: UIView, UIEditMenuInteractionDelegate {
     let paginas = UIView()
     let canvas = CanvasPagina()
+    let seleccion = CapaSeleccion()
     var alPegar: (([NSItemProvider]) -> Void)?
     private var menu: UIEditMenuInteraction?
 
@@ -170,6 +211,7 @@ final class VistaEnunciado: UIView, UIEditMenuInteractionDelegate {
         paginas.clipsToBounds = true
         addSubview(paginas)
         addSubview(canvas)
+        addSubview(seleccion)
         let menu = UIEditMenuInteraction(delegate: self)
         addInteraction(menu)
         self.menu = menu
@@ -187,6 +229,7 @@ final class VistaEnunciado: UIView, UIEditMenuInteractionDelegate {
         super.layoutSubviews()
         paginas.frame = bounds
         canvas.frame = bounds
+        seleccion.frame = bounds
     }
 
     @objc private func mantenido(_ gesto: UILongPressGestureRecognizer) {

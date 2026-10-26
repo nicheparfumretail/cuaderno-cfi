@@ -5,6 +5,9 @@ import SwiftUI
 ///
 /// En una práctica, el panel es el enunciado (con notas encima) y se puede ensanchar o dejar a
 /// pantalla completa; la corrección no sale mientras se escribe, sino en «Solución».
+///
+/// De la hoja solo se sale con la flecha de arriba a la izquierda: deslizar hacia atrás está
+/// apagado, porque saltaba al arrastrar la separación del panel o una página del enunciado.
 struct HojaView: View {
     enum Modo: String, Identifiable {
         case lienzo = "Lienzo"
@@ -27,6 +30,7 @@ struct HojaView: View {
     /// Mientras se prepara el PDF (tarda un poco): se ve una rueda de espera.
     @State private var exportando = false
     @Environment(\.colorScheme) private var esquema
+    @Environment(\.dismiss) private var volver
 
     init(hoja: Hoja, archivo: Archivo) {
         _editor = StateObject(wrappedValue: EditorHoja(hoja: hoja, archivo: archivo))
@@ -60,6 +64,8 @@ struct HojaView: View {
         }
         .environmentObject(interaccion)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .background(SinGestoAtras())
         .toolbar { barra }
         .sheet(isPresented: $mostrarBalance) {
             BalanceView(balance: BalanceComprobacion(asientos: editor.asientos))
@@ -186,6 +192,15 @@ struct HojaView: View {
 
     @ToolbarContentBuilder
     private var barra: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button { volver() } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left").fontWeight(.semibold)
+                    Text("Inicio")
+                }
+            }
+            .accessibilityLabel("Volver al inicio")
+        }
         ToolbarItem(placement: .principal) {
             Picker("Vista", selection: $modo) {
                 ForEach(modos) { Text($0.rawValue).tag($0) }
@@ -248,6 +263,42 @@ struct HojaView: View {
             } label: {
                 Label("Más", systemImage: "ellipsis.circle")
             }
+        }
+    }
+}
+
+/// Apaga los gestos de volver deslizando mientras la hoja está a la vista: el de siempre (desde el
+/// borde) y el de iPadOS 26 (desde cualquier punto de la pantalla), si lo hay. Al salir de la
+/// hoja vuelven a estar encendidos.
+private struct SinGestoAtras: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> Controlador {
+        Controlador()
+    }
+
+    func updateUIViewController(_ controlador: Controlador, context: Context) {}
+
+    final class Controlador: UIViewController {
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            for gesto in gestos { gesto.isEnabled = false }
+        }
+
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            for gesto in gestos { gesto.isEnabled = true }
+        }
+
+        private var gestos: [UIGestureRecognizer] {
+            guard let navegacion = navigationController else { return [] }
+            var lista: [UIGestureRecognizer] = []
+            if let borde = navegacion.interactivePopGestureRecognizer { lista.append(borde) }
+            // El de iPadOS 26 se busca por su nombre: así compila también con el SDK de iOS 18.
+            let nombre = "interactiveContentPopGestureRecognizer"
+            if navegacion.responds(to: NSSelectorFromString(nombre)),
+               let contenido = navegacion.value(forKey: nombre) as? UIGestureRecognizer {
+                lista.append(contenido)
+            }
+            return lista
         }
     }
 }

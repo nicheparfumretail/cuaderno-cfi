@@ -103,7 +103,7 @@ struct EnunciadoView: View {
                 .font(.system(size: 44))
                 .foregroundStyle(.secondary)
             Text("Añade el enunciado").font(.headline)
-            Text("Copia una captura y mantén el dedo aquí → Pegar (o el botón Pegar de arriba). También puedes elegir fotos o un PDF o un Word. Van uno debajo de otro y escribes encima o en los márgenes con el Pencil.")
+            Text("Copia una captura y mantén el dedo aquí → Pegar (o el botón Pegar de arriba). También puedes elegir fotos o un PDF o un Word. Van uno debajo de otro y escribes encima o en los márgenes con el Pencil. Toca una página con el dedo para moverla, cambiarle el tamaño o quitarla.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
         }
