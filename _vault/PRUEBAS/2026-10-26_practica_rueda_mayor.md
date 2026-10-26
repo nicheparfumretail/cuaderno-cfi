@@ -20,3 +20,21 @@
 | 12 | Botón de pantalla completa del enunciado; luego volver | El enunciado ocupa toda la pantalla y vuelve el lienzo | |
 | 13 | Escribir un asiento que no cuadre en el lienzo de la práctica | En limpio no dice que no cuadra; «Solución» sí, debajo del asiento | |
 | 14 | Cerrar y reabrir la práctica desde el histórico | Siguen el enunciado y las notas | |
+
+## Resultado (26-10-2026)
+- 1 a 4 ✅ con matices: la cuenta del centro de la rueda se mezclaba con el texto de detrás; el mayor tenía que abrirse en T y nombrar las contrapartidas.
+- 7: el PDF salía, pero con otro aspecto (él quiere el de En limpio, con su fondo oscuro), tardaba sin avisar y no dejaba compartir con Freenotes.
+- 8 a 11 ❌ El enunciado se quedaba en blanco al pegar una captura, subir una foto o un PDF. Mantener el dedo no ofrecía «Pegar».
+- Pidió además todos los importes con dos decimales. Arreglado en ADR-016.
+
+## Prueba 003b · Tras ADR-016 (pendiente)
+
+| # | Qué hacer | Qué debería pasar | Resultado |
+|---|---|---|---|
+| 1 | Mantener pulsado un apunte | La rueda tapa lo de detrás (esmerilado) y la cuenta del centro se lee bien | |
+| 2 | Mirar cualquier importe (panel, En limpio, mayor, avisos) | Siempre con dos decimales: 1.000,00 | |
+| 3 | Practicar ejercicio → copiar una captura → mantener el dedo en el panel → Pegar | La captura sale en el panel | |
+| 4 | Botón Pegar de arriba, Fotos y Archivo (un PDF) | Cada cosa sale debajo de la anterior | |
+| 5 | En limpio → Exportar en PDF | Sale una rueda de espera y luego la hoja de compartir | |
+| 6 | En la hoja de compartir, elegir Freenotes | El PDF se abre en Freenotes con el aspecto de En limpio (fondo negro si el iPad está en oscuro) | |
+| 7 | Abrir el mayor de la 400 | Sale en T con «Saldo acreedor …» bajo el Haber; en «Contrapartida», «600 Compras de mercaderías» y «472 HP, IVA soportado» | |

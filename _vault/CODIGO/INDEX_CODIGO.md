@@ -90,3 +90,14 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Asientos/DiarioPDF.swift` | En limpio (o la solución) en PDF A4 |
 | `CuadernoApp.swiftpm/Asientos/LimpioView.swift` | Ahora con zoom, salto con resaltado y tres usos: diario, práctica (sin cuadres) y solución |
 | `CuadernoApp.swiftpm/Practica/` | Modo práctica: importar el enunciado (`ImportadorEnunciado`), guardarlo con la hoja, lienzo de notas con las páginas debajo de la tinta, panel del enunciado y vistas de la solución |
+
+## Actualización 26-10-2026 (2) — ADR-016
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/Importe.swift` | `formatear` siempre con dos decimales |
+| `CuadernoApp.swiftpm/Practica/LienzoNotasView.swift` | Ahora con `VistaEnunciado`: páginas detrás, lienzo transparente delante y menú de pegar al mantener el dedo |
+| `CuadernoApp.swiftpm/Asientos/DiarioPDF.swift` | PDF dibujado con las vistas de En limpio (claro u oscuro) y `Compartir`, la hoja de compartir del sistema con un archivo |
+| `CuadernoApp.swiftpm/Asientos/LimpioView.swift` | `AsientoLimpio` sirve para la pantalla (con `Interactivo`) y para el PDF (quieto) |
+| `CuadernoApp.swiftpm/Asientos/ApunteFila.swift` | `FilaLimpia`: el apunte en limpio, igual en la pantalla y en el PDF |
+| `CuadernoApp.swiftpm/Asientos/MayorView.swift` | Se abre en T con el saldo; pestaña «Contrapartida» con el nombre de cada cuenta |

@@ -98,3 +98,12 @@
 - **Practicar ejercicio** (en el «+»): una hoja como las demás, pero el panel es el enunciado. Admite capturas (pegadas o de Fotos), PDF o Word, una debajo de otra, con notas a mano encima y en los márgenes. El panel se ensancha hasta el 85 % o se pone a pantalla completa.
 - En una práctica no se dice si un asiento cuadra mientras se escribe. Eso lo dice la vista **«Solución»**: partida doble, cuentas que no existen en el PGC (`AsientoResuelto.revision`) y sumas del diario.
 - Límite: sin la solución del ejercicio, la app no sabe si un asiento corresponde al enunciado (la cuenta o el importe que pedía). Para eso haría falta Claude por API (de pago; la clave se escribe en el iPad) o la solución oficial. Pendiente de que Iulian decida.
+
+## ADR-016 · Importes con dos decimales, PDF igual que En limpio y mayor en T de entrada (26-10-2026)
+- Pedido por Iulian al probar ADR-015.
+- **Todos los importes con dos decimales**, también los redondos («1.000,00», «210,00»). Sustituye la regla anterior de `Importe.formatear` (sin decimales cuando eran cero). Vale para la pantalla, los avisos, el PDF y el visor del PC.
+- **El PDF se ve como En limpio:** se dibujan las mismas vistas (`AsientoLimpio`, `FilaLimpia`), quietas: la fecha como texto y sin asas. Si el iPad está en modo oscuro, el PDF sale con fondo negro, como lo ve Iulian. Las páginas tienen el ancho de En limpio (1000 puntos) y la proporción de un A4.
+- **Compartir un archivo, no datos:** el PDF se escribe en un archivo y se abre la hoja de compartir del sistema. Así salen las apps que abren PDF, como Freenotes, además de Guardar en Archivos. Mientras se prepara se ve una rueda de espera.
+- **Mayor:** se abre en T, con las sumas y el saldo debajo del lado que suma más (saldo deudor bajo el Debe, acreedor bajo el Haber). La otra pestaña se llama «Contrapartida» y pone cada cuenta con su nombre («472 HP, IVA soportado»), no solo el número. En la T, cada movimiento lleva su asiento y sus contrapartidas.
+- **Rueda:** disco esmerilado y centro casi opaco, para que la cuenta no se mezcle con el texto de detrás.
+- **Enunciado:** las páginas van en una vista detrás de un lienzo transparente (antes iban dentro del lienzo opaco y no se veían). Manteniendo el dedo sale «Pegar», sin el aviso de permiso.

@@ -88,3 +88,13 @@
 - Pendiente:
   - que Iulian lo pruebe en el iPad ([prueba 003](../PRUEBAS/2026-10-26_practica_rueda_mayor.md)), sobre todo el arrastre y los Word del enunciado;
   - que decida si la app resuelve el ejercicio con Claude por API.
+
+## 26-10-2026 (2) — Enunciado en blanco, PDF como En limpio y mayor en T
+- Prueba de Iulian:
+  - la cuenta del centro de la rueda se mezclaba con el texto de detrás;
+  - quería todos los importes con dos decimales;
+  - en la práctica no se veía nada al pegar una captura, subir una foto o un PDF;
+  - el PDF exportado no tenía el aspecto de En limpio, tardaba sin avisar y no dejaba compartir con Freenotes;
+  - el mayor tenía que abrirse en T y decir el nombre de las contrapartidas.
+- Hecho (ADR-016). CI en verde a la primera y zip publicado.
+- Pendiente: que Iulian lo pruebe ([prueba 003](../PRUEBAS/2026-10-26_practica_rueda_mayor.md), parte b) y decida si quiere la resolución con Claude por API.
