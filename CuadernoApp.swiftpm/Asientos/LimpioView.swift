@@ -77,9 +77,11 @@ struct LimpioView: View {
             }
             ForEach(resueltos) { resuelto in
                 let resaltado = interaccion.resaltado == resuelto.numero
-                AsientoLimpio(resuelto: resuelto, acciones: acciones, uso: uso,
-                              cambiarFecha: { editor.ponerFecha($0, asiento: resuelto.numero - 1) },
-                              recuperar: { editor.recuperarDescartadas(asiento: resuelto.numero - 1) })
+                AsientoLimpio(resuelto: resuelto, uso: uso, interactivo: AsientoLimpio.Interactivo(
+                    acciones: acciones,
+                    cambiarFecha: { editor.ponerFecha($0, asiento: resuelto.numero - 1) },
+                    recuperar: { editor.recuperarDescartadas(asiento: resuelto.numero - 1) }))
+                    .modifier(ZonaParaSoltar(asiento: resuelto.numero - 1))
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.yellow.opacity(resaltado ? 0.4 : 0)))
                     .animation(.easeInOut(duration: 0.3), value: resaltado)
                     .id(resuelto.numero)
@@ -125,12 +127,19 @@ struct LimpioView: View {
     }
 }
 
-private struct AsientoLimpio: View {
+/// Un asiento en limpio. En la pantalla se corrige (fecha, apuntes, arrastre); en el PDF se
+/// dibuja igual pero quieto: la fecha como texto y sin asas ni botones.
+struct AsientoLimpio: View {
+    struct Interactivo {
+        let acciones: AccionesApunte
+        let cambiarFecha: (Fecha) -> Void
+        let recuperar: () -> Void
+    }
+
     let resuelto: AsientoResuelto
-    let acciones: AccionesApunte
     let uso: LimpioView.Uso
-    let cambiarFecha: (Fecha) -> Void
-    let recuperar: () -> Void
+    /// nil en el PDF.
+    var interactivo: Interactivo?
 
     var body: some View {
         let filas = resuelto.filasEditables
@@ -143,11 +152,7 @@ private struct AsientoLimpio: View {
                 VStack(spacing: 2) {
                     HStack(spacing: 8) {
                         Text("Nº \(resuelto.numero)").font(.callout.weight(.semibold))
-                        DatePicker("Fecha", selection: Binding(get: { resuelto.fecha.date },
-                                                               set: { cambiarFecha(Fecha($0)) }),
-                                   displayedComponents: .date)
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
+                        fecha
                     }
                     if !resuelto.concepto.isEmpty {
                         Text(resuelto.concepto).font(.caption).foregroundStyle(.secondary)
@@ -167,24 +172,58 @@ private struct AsientoLimpio: View {
                 }
             }
 
-            DescartadasView(cuantas: resuelto.descartadas, recuperar: recuperar)
+            if let interactivo {
+                DescartadasView(cuantas: resuelto.descartadas, recuperar: interactivo.recuperar)
+            }
             pie
         }
         .font(.system(.body, design: .serif).monospacedDigit())
         .padding(8)
-        .modifier(ZonaParaSoltar(asiento: resuelto.numero - 1))
     }
 
     private var raya: some View {
         Rectangle().fill(Color.secondary.opacity(0.5)).frame(height: 1)
     }
 
+    /// En la pantalla, el selector de fecha; en el PDF, la fecha con el mismo aspecto.
+    @ViewBuilder
+    private var fecha: some View {
+        if let interactivo {
+            DatePicker("Fecha", selection: Binding(get: { resuelto.fecha.date },
+                                                   set: { interactivo.cambiarFecha(Fecha($0)) }),
+                       displayedComponents: .date)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+        } else {
+            Text(resuelto.fecha.date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted,
+                                                                 locale: Locale(identifier: "es_ES"))))
+                .font(.body)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 6)
+                .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
     /// Debe: importe · nombre · (nº). Haber: (nº) · nombre · importe. Como en el cuaderno.
     @ViewBuilder
     private func lado(_ fila: FilaEditable?) -> some View {
         if let fila {
-            ApunteFila(fila: fila, estilo: .limpio, acciones: acciones)
+            if let interactivo {
+                ApunteFila(fila: fila, estilo: .limpio, acciones: interactivo.acciones)
+                    .frame(maxWidth: .infinity)
+            } else {
+                // Igual que en la pantalla, con el sitio del asa vacío.
+                HStack(alignment: .center, spacing: 6) {
+                    Color.clear.frame(width: 44, height: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        FilaLimpia(fila: fila)
+                        if let texto = fila.sinEntender {
+                            Text("No lo entiendo: «\(texto)»").font(.caption2).foregroundStyle(.orange)
+                        }
+                    }
+                }
                 .frame(maxWidth: .infinity)
+            }
         } else {
             Spacer().frame(maxWidth: .infinity)
         }

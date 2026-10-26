@@ -20,7 +20,9 @@ struct EnunciadoView: View {
             barra
             Divider()
             ZStack {
-                LienzoNotasView(editor: editor, paleta: interaccion.paleta)
+                LienzoNotasView(editor: editor, paleta: interaccion.paleta) { proveedores in
+                    Task { await pegar(proveedores) }
+                }
                 if editor.hoja.enunciado.isEmpty && !cargando {
                     vacio
                 }
@@ -71,8 +73,9 @@ struct EnunciadoView: View {
             PasteButton(supportedContentTypes: [.image, .pdf]) { proveedores in
                 Task { await pegar(proveedores) }
             }
-            .labelStyle(.iconOnly)
+            .labelStyle(.titleAndIcon)
             .buttonBorderShape(.capsule)
+            .font(.body)
             if !editor.adjuntos.isEmpty {
                 Menu {
                     ForEach(editor.adjuntos, id: \.id) { adjunto in
@@ -100,7 +103,7 @@ struct EnunciadoView: View {
                 .font(.system(size: 44))
                 .foregroundStyle(.secondary)
             Text("Añade el enunciado").font(.headline)
-            Text("Una captura (pégala o elígela de Fotos), un PDF o un Word. Puedes añadir varios: van uno debajo de otro y escribes encima o en los márgenes con el Pencil.")
+            Text("Copia una captura y mantén el dedo aquí → Pegar (o el botón Pegar de arriba). También puedes elegir fotos o un PDF o un Word. Van uno debajo de otro y escribes encima o en los márgenes con el Pencil.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
         }
@@ -134,13 +137,18 @@ struct EnunciadoView: View {
                 continue
             }
             let paginas = await ImportadorEnunciado.paginas(deDatos: datos, tipo: .image)
-            editor.añadirAdjunto(paginas, nombre: "Foto \(editor.adjuntos.count + 1)")
+            if paginas.isEmpty {
+                fallo = "No he podido leer una de las fotos."
+            } else {
+                editor.añadirAdjunto(paginas, nombre: "Foto \(editor.adjuntos.count + 1)")
+            }
         }
     }
 
     private func pegar(_ proveedores: [NSItemProvider]) async {
         cargando = true
         defer { cargando = false }
+        if proveedores.isEmpty { fallo = "No hay nada copiado que pegar." }
         for proveedor in proveedores {
             guard let tipo = proveedor.registeredContentTypes.first(where: { $0.conforms(to: .pdf) || $0.conforms(to: .image) }),
                   let datos = await leerDatos(de: proveedor, tipo: tipo) else { continue }

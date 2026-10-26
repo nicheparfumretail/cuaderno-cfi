@@ -22,11 +22,13 @@ final class ImporteTests: XCTestCase {
 
     func testFormatoDelCuaderno() {
         XCTAssertEqual(Importe.formatear(Decimal(string: "1185.8")!), "1.185,80")
-        XCTAssertEqual(Importe.formatear(1_000), "1.000")
-        XCTAssertEqual(Importe.formatear(81_153), "81.153")
+        XCTAssertEqual(Importe.formatear(1_000), "1.000,00", "siempre con dos decimales")
+        XCTAssertEqual(Importe.formatear(81_153), "81.153,00")
+        XCTAssertEqual(Importe.formatear(0), "0,00")
+        XCTAssertEqual(Importe.formatear(210), "210,00")
         XCTAssertEqual(Importe.formatear(Decimal(string: "-24.2")!), "-24,20")
         XCTAssertEqual(Importe.formatear(Decimal(string: "0.5")!), "0,50")
-        XCTAssertEqual(Importe.formatear(1_234_567), "1.234.567")
+        XCTAssertEqual(Importe.formatear(1_234_567), "1.234.567,00")
     }
 
     func testLeerImportesEscritos() {

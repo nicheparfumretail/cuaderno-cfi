@@ -23,7 +23,7 @@ final class ReconocimientoTests: XCTestCase {
         XCTAssertEqual(Set(leido.apuntes), [Apunte(.debe, "600", 4_900), Apunte(.debe, "472", 819),
                                             Apunte(.haber, "407", 1_000), Apunte(.haber, "400", 4_719)])
         XCTAssertNoThrow(try leido.asiento(empresa: "X", numero: 2).get())
-        XCTAssertEqual(leido.pistas, ["En la 472 dudaba entre 814 y 819: tomo 819, que es lo que hace "
+        XCTAssertEqual(leido.pistas, ["En la 472 dudaba entre 814,00 y 819,00: tomo 819,00, que es lo que hace "
                                       + "cuadrar el asiento. Compruébalo."])
     }
 
@@ -32,8 +32,8 @@ final class ReconocimientoTests: XCTestCase {
         let leido = try XCTUnwrap(LectorAsientos.leer(asientoDos(iva)).first)
         XCTAssertTrue(leido.apuntes.contains(Apunte(.debe, "472", 814)), "sin dudas de Vision no se cambia nada")
         XCTAssertEqual(Set(leido.pistas), [
-            "¿En la 472 pone 819 y no 814? Con 819 cuadra.",
-            "¿En la 400 pone 4.714 y no 4.719? Con 4.714 cuadra.",
+            "¿En la 472 pone 819,00 y no 814,00? Con 819,00 cuadra.",
+            "¿En la 400 pone 4.714,00 y no 4.719,00? Con 4.714,00 cuadra.",
         ])
     }
 
@@ -54,7 +54,7 @@ final class ReconocimientoTests: XCTestCase {
         XCTAssertEqual(leido.noEntendido, ["0,00 HJA oportado (472)"])
         XCTAssertEqual(DatosHoja.sugerencias(leido), [
             "En «0,00 HJA oportado (472)» leo la cuenta 472 pero no un importe: repasa las cifras del borde.",
-            "Para que cuadre, la 472 tendría que llevar 210.",
+            "Para que cuadre, la 472 tendría que llevar 210,00.",
         ])
     }
 

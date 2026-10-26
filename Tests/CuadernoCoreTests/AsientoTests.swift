@@ -19,7 +19,7 @@ final class AsientoTests: XCTestCase {
             XCTAssertEqual(e, .descuadre(debe: 1_000, haber: 900))
             XCTAssertEqual(e?.diferencia, 100)
             XCTAssertEqual(e?.errorDescription,
-                           "No cuadra: el Debe suma 1.000 y el Haber 900. Faltan 100 en el Haber.")
+                           "No cuadra: el Debe suma 1.000,00 y el Haber 900,00. Faltan 100,00 en el Haber.")
         }
     }
 

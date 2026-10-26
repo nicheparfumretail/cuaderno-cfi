@@ -24,6 +24,9 @@ struct HojaView: View {
     @State private var anchoPanel: CGFloat?
     @State private var anchoAlEmpezar: CGFloat?
     @State private var mostrarBalance = false
+    /// Mientras se prepara el PDF (tarda un poco): se ve una rueda de espera.
+    @State private var exportando = false
+    @Environment(\.colorScheme) private var esquema
 
     init(hoja: Hoja, archivo: Archivo) {
         _editor = StateObject(wrappedValue: EditorHoja(hoja: hoja, archivo: archivo))
@@ -48,6 +51,13 @@ struct HojaView: View {
                 RuedaApunteView(rueda: rueda, acciones: editor.acciones(interaccion: interaccion), interaccion: interaccion)
             }
         }
+        .overlay {
+            if exportando {
+                ProgressView("Preparando el PDF…")
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            }
+        }
         .environmentObject(interaccion)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { barra }
@@ -56,7 +66,7 @@ struct HojaView: View {
         }
         .sheet(item: $interaccion.cuentaMayor) { cuenta in
             MayorView(mayor: Mayor(cuenta: cuenta.codigo, asientos: editor.asientos),
-                      sinCuadrar: editor.esPractica ? 0 : editor.resueltos.filter { $0.asiento == nil && !$0.leido.apuntes.isEmpty }.count,
+                      sinCuadrar: asientosSinCuadrar,
                       irAAsiento: irA)
         }
         .onAppear { editor.programarLectura(espera: 0) }
@@ -150,6 +160,28 @@ struct HojaView: View {
         }
     }
 
+    /// Para el aviso del mayor; en una práctica no se dice (eso es de «Solución»).
+    private var asientosSinCuadrar: Int {
+        guard !editor.esPractica else { return 0 }
+        return editor.resueltos.filter { $0.asiento == nil && !$0.leido.apuntes.isEmpty }.count
+    }
+
+    // MARK: - Exportar
+
+    /// Prepara el PDF (con la rueda de espera a la vista) y abre la hoja de compartir del sistema.
+    private func exportar(solucion: Bool) {
+        guard !exportando else { return }
+        exportando = true
+        let pdf = editor.pdf(solucion: solucion, oscuro: esquema == .dark)
+        Task {
+            // Un momento para que la rueda de espera salga antes de ponerse a dibujar.
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            let url = await pdf.archivo()
+            exportando = false
+            if let url { Compartir.presentar(url) }
+        }
+    }
+
     // MARK: - Barra
 
     @ToolbarContentBuilder
@@ -183,10 +215,12 @@ struct HojaView: View {
                     Label(panelVisible ? "Ocultar panel" : "Mostrar panel", systemImage: "sidebar.right")
                 }
             } else {
-                ShareLink(item: editor.pdf(solucion: modo == .solucion),
-                          preview: SharePreview(modo == .solucion ? "Solución en PDF" : "En limpio en PDF")) {
+                Button {
+                    exportar(solucion: modo == .solucion)
+                } label: {
                     Label("Exportar en PDF", systemImage: "square.and.arrow.up")
                 }
+                .disabled(exportando)
             }
             Menu {
                 if !editor.esPractica {
@@ -196,11 +230,15 @@ struct HojaView: View {
                         Label("Balance de comprobación", systemImage: "scalemass")
                     }
                 }
-                ShareLink(item: editor.pdf(solucion: false), preview: SharePreview("En limpio en PDF")) {
+                Button {
+                    exportar(solucion: false)
+                } label: {
                     Label("Exportar en limpio (PDF)", systemImage: "doc.richtext")
                 }
                 if editor.esPractica {
-                    ShareLink(item: editor.pdf(solucion: true), preview: SharePreview("Solución en PDF")) {
+                    Button {
+                        exportar(solucion: true)
+                    } label: {
                         Label("Exportar la solución (PDF)", systemImage: "checkmark.seal")
                     }
                 }

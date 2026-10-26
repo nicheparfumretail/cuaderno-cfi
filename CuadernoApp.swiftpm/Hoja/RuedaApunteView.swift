@@ -22,7 +22,7 @@ struct RuedaApunteView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                Color.black.opacity(abierta ? 0.12 : 0)
+                Color.black.opacity(abierta ? 0.25 : 0)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: cerrar)
                 ruedaCompleta
@@ -47,13 +47,22 @@ struct RuedaApunteView: View {
         return CGPoint(x: x, y: y)
     }
 
+    /// La rueda es un disco esmerilado entero: lo que hay detrás (el nombre de la cuenta, otros
+    /// apuntes) se difumina y no se mezcla con las letras de la rueda. El centro, casi opaco,
+    /// deja la cuenta bien a la vista.
     private var ruedaCompleta: some View {
         let lista = opciones
+        let exterior: CGFloat = (radio + 34) * 2
+        let interior: CGFloat = (radio - 30) * 2
         return ZStack {
             Circle()
-                .stroke(.regularMaterial, style: StrokeStyle(lineWidth: 66))
-                .frame(width: radio * 2, height: radio * 2)
-                .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+                .fill(.regularMaterial)
+                .frame(width: exterior, height: exterior)
+                .shadow(color: .black.opacity(0.25), radius: 14, y: 5)
+            Circle()
+                .fill(.ultraThickMaterial)
+                .frame(width: interior, height: interior)
+                .overlay { Circle().stroke(Color.secondary.opacity(0.3), lineWidth: 1) }
             rotulo
             ForEach(Array(lista.enumerated()), id: \.element.id) { indice, opcion in
                 boton(opcion)
@@ -66,7 +75,7 @@ struct RuedaApunteView: View {
     private var rotulo: some View {
         VStack(spacing: 0) {
             Text(rueda.fila.cuenta.isEmpty ? "?" : rueda.fila.cuenta)
-                .font(.headline.monospacedDigit())
+                .font(.title3.monospacedDigit().bold())
             if let importe = rueda.fila.importe {
                 Text(Importe.formatear(importe)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
             }

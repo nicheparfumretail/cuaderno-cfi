@@ -38,7 +38,7 @@ final class CorreccionesTests: XCTestCase {
 
     private let leido = AsientoLeido(apuntes: [Apunte(.debe, "407", 1_000), Apunte(.haber, "400", 1_210)],
                                      noEntendido: ["0,00 HJA oportado (472)"],
-                                     pistas: ["Para que cuadre, la 472 tendría que llevar 210."])
+                                     pistas: ["Para que cuadre, la 472 tendría que llevar 210,00."])
 
     private func datos() -> DatosHoja {
         DatosHoja(esApertura: false, fechaInicial: fecha(10, 1, 2025))

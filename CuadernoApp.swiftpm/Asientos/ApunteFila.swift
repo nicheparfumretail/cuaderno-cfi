@@ -149,41 +149,53 @@ struct ApunteFila: View {
     /// Panel: importe del Debe | (cuenta) nombre | importe del Haber.
     private var panel: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(fila.lado == .debe ? importe : "").frame(width: 72, alignment: .trailing)
-            Text(fila.lado == .haber ? "a (\(codigo)) \(nombre)" : "(\(codigo)) \(nombre)")
+            Text(fila.lado == .debe ? fila.textoImporte : "").frame(width: 72, alignment: .trailing)
+            Text(fila.lado == .haber ? "a (\(fila.textoCodigo)) \(fila.textoNombre)" : "(\(fila.textoCodigo)) \(fila.textoNombre)")
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(fila.lado == .haber ? importe : "").frame(width: 72, alignment: .trailing)
+            Text(fila.lado == .haber ? fila.textoImporte : "").frame(width: 72, alignment: .trailing)
         }
         .font(.footnote.monospacedDigit())
-        .foregroundStyle(color)
+        .foregroundStyle(fila.colorTexto)
     }
 
-    /// En limpio, como en el cuaderno. Debe: importe · nombre · (nº). Haber: (nº) · nombre · importe.
     private var limpio: some View {
+        FilaLimpia(fila: fila)
+    }
+}
+
+extension FilaEditable {
+    var textoCodigo: String { cuenta.isEmpty ? "?" : cuenta }
+    var textoNombre: String { PlanDeCuentas.nombre(de: cuenta) ?? "" }
+    var textoImporte: String { importe.map(Importe.formatear) ?? "?" }
+
+    /// Naranja lo que no se entiende, azul lo corregido a mano.
+    var colorTexto: Color {
+        if sinEntender != nil { return .orange }
+        return corregida ? .blue : .primary
+    }
+}
+
+/// Un apunte en limpio, como en el cuaderno. Debe: importe · nombre · (nº). Haber: (nº) · nombre ·
+/// importe. Lo usan la pantalla de En limpio y su PDF, para que se vean igual.
+struct FilaLimpia: View {
+    let fila: FilaEditable
+
+    var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             if fila.lado == .debe {
-                Text(importe).frame(width: 110, alignment: .leading)
-                Text(nombre).lineLimit(1).minimumScaleFactor(0.7)
+                Text(fila.textoImporte).frame(width: 110, alignment: .leading)
+                Text(fila.textoNombre).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 4)
-                Text("(\(codigo))").foregroundStyle(.secondary)
+                Text("(\(fila.textoCodigo))").foregroundStyle(.secondary)
             } else {
-                Text("(\(codigo))").foregroundStyle(.secondary)
-                Text(nombre).lineLimit(1).minimumScaleFactor(0.7)
+                Text("(\(fila.textoCodigo))").foregroundStyle(.secondary)
+                Text(fila.textoNombre).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 4)
-                Text(importe).frame(width: 110, alignment: .trailing)
+                Text(fila.textoImporte).frame(width: 110, alignment: .trailing)
             }
         }
-        .foregroundStyle(color)
-    }
-
-    private var codigo: String { fila.cuenta.isEmpty ? "?" : fila.cuenta }
-    private var nombre: String { PlanDeCuentas.nombre(de: fila.cuenta) ?? "" }
-    private var importe: String { fila.importe.map(Importe.formatear) ?? "?" }
-
-    private var color: Color {
-        if fila.sinEntender != nil { return .orange }
-        return fila.corregida ? .blue : .primary
+        .foregroundStyle(fila.colorTexto)
     }
 }
 

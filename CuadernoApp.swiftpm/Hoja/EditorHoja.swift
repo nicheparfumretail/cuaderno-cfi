@@ -143,9 +143,10 @@ final class EditorHoja: ObservableObject {
         archivo.guardar(hoja)
     }
 
-    /// La hoja en limpio en PDF; con `solucion`, con lo que hay que revisar de cada asiento.
-    func pdf(solucion: Bool) -> DiarioPDF {
-        DiarioPDF(resueltos: resueltos, creada: hoja.creada, practica: esPractica, solucion: solucion)
+    /// La hoja en limpio en PDF, como se ve en la pantalla; con `solucion`, con lo que hay que
+    /// revisar de cada asiento.
+    func pdf(solucion: Bool, oscuro: Bool) -> DiarioPDF {
+        DiarioPDF(resueltos: resueltos, creada: hoja.creada, practica: esPractica, solucion: solucion, oscuro: oscuro)
     }
 
     /// El diario de la hoja en JSON, para abrirlo en el visor del PC.

@@ -45,8 +45,8 @@ public enum Importe {
         return valor
     }
 
-    /// Formato del cuaderno: "1.185,80", "1.000", "-24,20".
-    /// Sin decimales cuando son cero, como en los apuntes de clase.
+    /// Formato del cuaderno: "1.185,80", "1.000,00", "-24,20". Siempre con los dos decimales
+    /// de los céntimos, también cuando son cero (lo pidió Iulian: todos los importes iguales).
     public static func formatear(_ valor: Decimal) -> String {
         let redondeado = redondear(valor)
         let negativo = redondeado < 0
@@ -62,11 +62,9 @@ public enum Importe {
         grupos.insert(String(resto), at: 0)
         var resultado = grupos.joined(separator: ".")
 
-        if partes.count > 1 {
-            var decimales = String(partes[1])
-            while decimales.count < 2 { decimales += "0" }
-            if decimales != "00" { resultado += "," + decimales }
-        }
+        var decimales = partes.count > 1 ? String(partes[1]) : ""
+        while decimales.count < 2 { decimales += "0" }
+        resultado += "," + decimales
         return (negativo ? "-" : "") + resultado
     }
 }

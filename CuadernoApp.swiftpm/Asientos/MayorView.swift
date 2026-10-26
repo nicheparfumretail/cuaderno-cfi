@@ -2,12 +2,13 @@ import SwiftUI
 
 /// El libro mayor de una cuenta. Arriba, su recorrido asiento a asiento como un diagrama: cada
 /// parada es un asiento, lo cargado (Debe) va encima de la línea y lo abonado (Haber) debajo, con
-/// las cuentas con las que se conecta y el saldo que queda entre parada y parada. Debajo, la tabla
-/// entera (o la cuenta en T). Tocando un asiento se va a él en la hoja.
+/// las cuentas con las que se conecta y el saldo que queda entre parada y parada. Debajo, la
+/// cuenta en T con su saldo o, en «Contrapartida», cada movimiento con sus contrapartidas.
+/// Tocando un asiento se va a él en la hoja.
 struct MayorView: View {
     enum Forma: String, CaseIterable, Identifiable {
-        case tabla = "Tabla"
         case enT = "En T"
+        case contrapartida = "Contrapartida"
         var id: String { rawValue }
     }
 
@@ -16,7 +17,7 @@ struct MayorView: View {
     var sinCuadrar = 0
     var irAAsiento: ((Int) -> Void)?
 
-    @State private var forma = Forma.tabla
+    @State private var forma = Forma.enT
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -37,8 +38,8 @@ struct MayorView: View {
                         .pickerStyle(.segmented)
                         .frame(maxWidth: 260)
                         switch forma {
-                        case .tabla: TablaMayor(mayor: mayor, ir: ir)
-                        case .enT: CuentaEnT(mayor: mayor)
+                        case .enT: CuentaEnT(mayor: mayor, ir: ir)
+                        case .contrapartida: TablaMayor(mayor: mayor, ir: ir)
                         }
                         Text(textoSaldo).font(.headline)
                     }
@@ -77,6 +78,12 @@ struct MayorView: View {
         guard let irAAsiento else { return }
         dismiss()
         irAAsiento(numero)
+    }
+
+    /// Una contrapartida con su nombre: «472 HP, IVA soportado», para no tener que recordarla.
+    static func contrapartida(_ codigo: String) -> String {
+        guard let nombre = PlanDeCuentas.nombre(de: codigo) else { return codigo }
+        return "\(codigo) \(nombre)"
     }
 
     /// «1.000,00 D» (deudor) o «500,00 A» (acreedor).
@@ -136,14 +143,20 @@ private struct DiagramaMayor: View {
             VStack(spacing: 2) {
                 Text("Nº \(movimiento.numero)").font(.subheadline.bold())
                 Text(movimiento.fecha.description).font(.caption2).foregroundStyle(.secondary)
-                Text(movimiento.contrapartidas.isEmpty ? " " : "con " + movimiento.contrapartidas.joined(separator: ", "))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                ForEach(movimiento.contrapartidas.prefix(2), id: \.self) { codigo in
+                    Text(MayorView.contrapartida(codigo))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                if movimiento.contrapartidas.count > 2 {
+                    Text("y \(movimiento.contrapartidas.count - 2) más").font(.caption2).foregroundStyle(.secondary)
+                }
             }
             .padding(.top, 4)
+            .padding(.horizontal, 4)
         }
-        .frame(width: 118)
+        .frame(width: 156)
         .contentShape(Rectangle())
     }
 
@@ -160,21 +173,22 @@ private struct DiagramaMayor: View {
     }
 }
 
-/// La tabla del mayor: cada movimiento con su contrapartida y el saldo después de él.
+/// Las contrapartidas: cada movimiento con las cuentas del otro lado del asiento (con su nombre)
+/// y el saldo después de él.
 private struct TablaMayor: View {
     let mayor: Mayor
     let ir: (Int) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            fila(fecha: "Fecha", numero: "Nº", contrapartida: "Contrapartida", debe: "Debe", haber: "Haber", saldo: "Saldo")
+            fila(fecha: "Fecha", numero: "Nº", contrapartidas: ["Contrapartida"], debe: "Debe", haber: "Haber", saldo: "Saldo")
                 .bold()
             Divider()
             ForEach(mayor.movimientos) { movimiento in
                 Button { ir(movimiento.numero) } label: {
                     fila(fecha: movimiento.fecha.description,
                          numero: "\(movimiento.numero)",
-                         contrapartida: contrapartida(movimiento),
+                         contrapartidas: contrapartidas(movimiento),
                          debe: movimiento.debe > 0 ? Importe.formatear(movimiento.debe) : "",
                          haber: movimiento.haber > 0 ? Importe.formatear(movimiento.haber) : "",
                          saldo: MayorView.saldo(movimiento.saldo))
@@ -183,7 +197,7 @@ private struct TablaMayor: View {
                 .buttonStyle(.plain)
                 Divider()
             }
-            fila(fecha: "", numero: "", contrapartida: "Sumas",
+            fila(fecha: "", numero: "", contrapartidas: ["Sumas"],
                  debe: Importe.formatear(mayor.sumaDebe), haber: Importe.formatear(mayor.sumaHaber),
                  saldo: MayorView.saldo(mayor.saldo))
                 .bold()
@@ -191,19 +205,18 @@ private struct TablaMayor: View {
         .font(.footnote.monospacedDigit())
     }
 
-    private func contrapartida(_ movimiento: Mayor.Movimiento) -> String {
-        guard let primera = movimiento.contrapartidas.first else { return movimiento.concepto }
-        if movimiento.contrapartidas.count > 1 {
-            return movimiento.contrapartidas.joined(separator: ", ")
-        }
-        return "(\(primera)) \(PlanDeCuentas.nombre(de: primera) ?? "")"
+    private func contrapartidas(_ movimiento: Mayor.Movimiento) -> [String] {
+        movimiento.contrapartidas.isEmpty ? [movimiento.concepto] : movimiento.contrapartidas.map(MayorView.contrapartida)
     }
 
-    private func fila(fecha: String, numero: String, contrapartida: String, debe: String, haber: String, saldo: String) -> some View {
-        HStack(spacing: 6) {
+    private func fila(fecha: String, numero: String, contrapartidas: [String], debe: String, haber: String, saldo: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(fecha).frame(width: 78, alignment: .leading)
             Text(numero).frame(width: 30, alignment: .trailing)
-            Text(contrapartida).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(contrapartidas, id: \.self) { Text($0).lineLimit(1) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Text(debe).frame(width: 86, alignment: .trailing)
             Text(haber).frame(width: 86, alignment: .trailing)
             Text(saldo).frame(width: 100, alignment: .trailing)
@@ -212,9 +225,12 @@ private struct TablaMayor: View {
     }
 }
 
-/// La cuenta en T: Debe a la izquierda, Haber a la derecha y las sumas debajo.
+/// La cuenta en T: Debe a la izquierda, Haber a la derecha, las sumas debajo y el saldo en el
+/// lado que pesa más (deudor si el Debe suma más; acreedor si suma más el Haber). Cada movimiento
+/// lleva su número de asiento y su contrapartida.
 private struct CuentaEnT: View {
     let mayor: Mayor
+    let ir: (Int) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -231,26 +247,53 @@ private struct CuentaEnT: View {
             .overlay { Rectangle().frame(width: 2) }
             Divider()
             HStack(spacing: 0) {
-                Text(Importe.formatear(mayor.sumaDebe)).frame(maxWidth: .infinity, alignment: .trailing)
-                Text(Importe.formatear(mayor.sumaHaber)).frame(maxWidth: .infinity, alignment: .trailing)
+                celda("Suma \(Importe.formatear(mayor.sumaDebe))")
+                celda("Suma \(Importe.formatear(mayor.sumaHaber))")
             }
             .bold()
-            .padding(8)
+            HStack(spacing: 0) {
+                celda(textoSaldo(.deudor))
+                celda(textoSaldo(.acreedor))
+            }
+            .bold()
+            .foregroundStyle(Color.accentColor)
         }
         .font(.body.monospacedDigit())
     }
 
+    private func celda(_ texto: String) -> some View {
+        Text(texto)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+    }
+
+    /// El saldo va bajo el lado que suma más; en el otro lado, nada.
+    private func textoSaldo(_ tipo: TipoSaldo) -> String {
+        guard Mayor.tipo(de: mayor.saldo) == tipo else { return "" }
+        let importe = Importe.formatear(abs(mayor.saldo))
+        return tipo == .deudor ? "Saldo deudor \(importe)" : "Saldo acreedor \(importe)"
+    }
+
     private func columna(_ lado: Lado) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             ForEach(mayor.movimientos.filter { lado == .debe ? $0.debe > 0 : $0.haber > 0 }) { movimiento in
-                HStack {
-                    Text("(\(movimiento.numero))").foregroundStyle(.secondary)
-                    if let detalle = movimiento.detalle {
-                        Text(detalle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Button { ir(movimiento.numero) } label: {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("(\(movimiento.numero))").foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 1) {
+                            ForEach(movimiento.contrapartidas, id: \.self) { codigo in
+                                Text(MayorView.contrapartida(codigo)).lineLimit(1)
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        Spacer(minLength: 4)
+                        Text(Importe.formatear(lado == .debe ? movimiento.debe : movimiento.haber))
                     }
-                    Spacer()
-                    Text(Importe.formatear(lado == .debe ? movimiento.debe : movimiento.haber))
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(8)
