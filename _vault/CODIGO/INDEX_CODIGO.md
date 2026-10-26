@@ -101,3 +101,13 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Asientos/LimpioView.swift` | `AsientoLimpio` sirve para la pantalla (con `Interactivo`) y para el PDF (quieto) |
 | `CuadernoApp.swiftpm/Asientos/ApunteFila.swift` | `FilaLimpia`: el apunte en limpio, igual en la pantalla y en el PDF |
 | `CuadernoApp.swiftpm/Asientos/MayorView.swift` | Se abre en T con el saldo; pestaña «Contrapartida» con el nombre de cada cuenta |
+
+## Actualización 26-10-2026 (3) — ADR-017
+
+| Archivo | Qué hace |
+|---|---|
+| `CuadernoApp.swiftpm/Practica/EdicionPaginas.swift` | Nuevo: elegir, mover y redimensionar una página del enunciado con el dedo (`GestoPagina`) y su marco con «Al ancho» y «Quitar» (`CapaSeleccion`) |
+| `CuadernoApp.swiftpm/Practica/EditorHoja+Enunciado.swift` | Cada página con su sitio; `colocarPagina` mueve o escala también lo escrito encima; `quitarPagina`, `ajustarAlAncho` |
+| `CuadernoApp.swiftpm/Practica/LienzoNotasView.swift` | Coloca las páginas según su sitio (o donde está el dedo) y en su orden; capa del marco encima del lienzo |
+| `CuadernoApp.swiftpm/App/Archivo.swift` | `PaginaEnunciado` guarda `x`, `y` y `anchoMostrado` (opcionales: las hojas de antes se siguen abriendo) |
+| `CuadernoApp.swiftpm/Hoja/HojaView.swift` | Flecha «Inicio» propia; `SinGestoAtras` apaga los gestos de volver deslizando |

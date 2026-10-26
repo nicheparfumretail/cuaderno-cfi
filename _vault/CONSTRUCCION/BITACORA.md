@@ -98,3 +98,13 @@
   - el mayor tenía que abrirse en T y decir el nombre de las contrapartidas.
 - Hecho (ADR-016). CI en verde a la primera y zip publicado.
 - Pendiente: que Iulian lo pruebe ([prueba 003](../PRUEBAS/2026-10-26_practica_rueda_mayor.md), parte b) y decida si quiere la resolución con Claude por API.
+
+## 26-10-2026 (3) — Páginas del enunciado sueltas y salida solo con la flecha
+- Pedido de Iulian:
+  - poder mover, redimensionar y quitar lo pegado en el enunciado;
+  - que no se salga de la hoja sin querer al redimensionar el panel.
+- Hecho (ADR-017). CI en verde a la primera y zip publicado.
+- Pendiente:
+  - que lo pruebe ([prueba 004](../PRUEBAS/2026-10-26_enunciado_editable.md));
+  - la [prueba 003b](../PRUEBAS/2026-10-26_practica_rueda_mayor.md);
+  - que decida si quiere la resolución con Claude por API.

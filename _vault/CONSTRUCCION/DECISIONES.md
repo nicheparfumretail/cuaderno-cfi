@@ -107,3 +107,16 @@
 - **Mayor:** se abre en T, con las sumas y el saldo debajo del lado que suma más (saldo deudor bajo el Debe, acreedor bajo el Haber). La otra pestaña se llama «Contrapartida» y pone cada cuenta con su nombre («472 HP, IVA soportado»), no solo el número. En la T, cada movimiento lleva su asiento y sus contrapartidas.
 - **Rueda:** disco esmerilado y centro casi opaco, para que la cuenta no se mezcle con el texto de detrás.
 - **Enunciado:** las páginas van en una vista detrás de un lienzo transparente (antes iban dentro del lienzo opaco y no se veían). Manteniendo el dedo sale «Pegar», sin el aviso de permiso.
+
+## ADR-017 · Páginas del enunciado sueltas y salir de la hoja solo con la flecha (26-10-2026)
+- Pedido por Iulian tras ADR-016.
+- **Cada página del enunciado guarda su sitio y su ancho** (`PaginaEnunciado.x`, `y`, `anchoMostrado`, en puntos de página). Antes iban siempre una debajo de otra. Las hojas guardadas antes no tienen estos datos: se siguen viendo una debajo de otra, y al tocar cualquier página se fija el sitio de todas, para que ninguna se recoloque sola.
+- **Se edita con el dedo; el Pencil sigue escribiendo:**
+  - tocar una página → marco azul con una bola en cada esquina y una barrita con «Al ancho» y «Quitar»;
+  - arrastrar dentro de la página elegida → se mueve;
+  - tirar de una esquina → se agranda o se achica sin deformarse, con la esquina de enfrente quieta;
+  - tocar fuera, tocarla otra vez o empezar a escribir → se suelta.
+  Fuera de la página elegida, el dedo sigue desplazando y ampliando el enunciado.
+- **Lo escrito encima va con la página:** los trazos cuyo centro cae dentro de la página se mueven y se escalan con ella. Mientras dura el arrastre viajan como imagen y al soltar vuelven al lienzo. Al quitar una página, lo escrito encima se borra con ella; por eso «Quitar» pide confirmación.
+- **Quitar ya no sube lo de debajo**, tampoco al quitar un adjunto entero desde el clip. Con las páginas sueltas, cerrar el hueco movería cosas que Iulian ha colocado a mano. Esto sustituye lo que decía ADR-015.
+- **De una hoja solo se sale con la flecha «Inicio».** Deslizar hacia atrás está apagado, tanto desde el borde como el gesto de iPadOS 26 desde cualquier punto. Saltaba al arrastrar la separación del panel. Al volver al inicio, los gestos se encienden otra vez.
