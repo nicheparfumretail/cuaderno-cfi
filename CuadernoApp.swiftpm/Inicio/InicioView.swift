@@ -52,6 +52,8 @@ struct InicioView: View {
                 HistoricoView(archivo: archivo)
             }
         }
+        // La calculadora flotante, por encima de todas las pantallas.
+        .overlay { CapaCalculadora() }
     }
 
     private func abrirMenu(_ abierto: Bool) {

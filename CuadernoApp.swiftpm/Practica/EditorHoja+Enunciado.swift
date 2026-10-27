@@ -168,6 +168,11 @@ extension EditorHoja {
         notas = nuevas
         programarGuardado()
     }
+
+    func calculosCambiados(_ nuevos: PKDrawing) {
+        calculos = nuevos
+        programarGuardado()
+    }
 }
 
 extension PaginaEnunciado {

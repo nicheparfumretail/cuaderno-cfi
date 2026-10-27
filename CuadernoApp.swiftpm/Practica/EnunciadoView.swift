@@ -2,11 +2,13 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 
-/// El panel de una práctica: el enunciado (capturas, fotos, PDF o Word, uno debajo de otro) con
-/// las notas escritas encima. Mientras se practica no dice si los asientos cuadran: eso queda
-/// para la vista «Solución».
+/// La mitad del enunciado en una práctica: capturas, fotos, PDF o Word con las notas escritas
+/// encima. Mientras se practica no dice si los asientos cuadran: eso queda para la vista
+/// «Solución». Minimizado, solo se ve su barra y la otra mitad (los cálculos) ocupa el panel.
 struct EnunciadoView: View {
     @ObservedObject var editor: EditorHoja
+    var plegado = false
+    var alPlegar: () -> Void = {}
     @EnvironmentObject private var interaccion: InteraccionHoja
 
     @State private var fotos: [PhotosPickerItem] = []
@@ -18,18 +20,20 @@ struct EnunciadoView: View {
     var body: some View {
         VStack(spacing: 0) {
             barra
-            Divider()
-            ZStack {
-                LienzoNotasView(editor: editor, paleta: interaccion.paleta) { proveedores in
-                    Task { await pegar(proveedores) }
-                }
-                if editor.hoja.enunciado.isEmpty && !cargando {
-                    vacio
-                }
-                if cargando {
-                    ProgressView("Preparando el enunciado…")
-                        .padding(20)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            if !plegado {
+                Divider()
+                ZStack {
+                    LienzoNotasView(editor: editor, paleta: interaccion.paleta) { proveedores in
+                        Task { await pegar(proveedores) }
+                    }
+                    if editor.hoja.enunciado.isEmpty && !cargando {
+                        vacio
+                    }
+                    if cargando {
+                        ProgressView("Preparando el enunciado…")
+                            .padding(20)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    }
                 }
             }
         }
@@ -60,7 +64,10 @@ struct EnunciadoView: View {
 
     private var barra: some View {
         HStack(spacing: 16) {
-            Text("Enunciado").font(.headline)
+            Button(action: alPlegar) {
+                Text("Enunciado").font(.headline)
+            }
+            .buttonStyle(.plain)
             Spacer(minLength: 0)
             PhotosPicker(selection: $fotos, maxSelectionCount: 10, matching: .images) {
                 Image(systemName: "photo.on.rectangle")
@@ -90,6 +97,10 @@ struct EnunciadoView: View {
                 }
                 .accessibilityLabel("Adjuntos del enunciado")
             }
+            Button(action: alPlegar) {
+                Image(systemName: plegado ? "rectangle.expand.vertical" : "rectangle.compress.vertical")
+            }
+            .accessibilityLabel(plegado ? "Abrir el enunciado" : "Minimizar el enunciado")
         }
         .font(.title3)
         .padding(.horizontal, 14)

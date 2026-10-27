@@ -31,6 +31,9 @@ struct HojaView: View {
     @State private var exportando = false
     @Environment(\.colorScheme) private var esquema
     @Environment(\.dismiss) private var volver
+    /// La calculadora flotante (va en la raíz de la app: ver `CapaCalculadora`).
+    @AppStorage("calculadora.abierta") private var calculadoraAbierta = false
+    @AppStorage("calculadora.minimizada") private var calculadoraMinimizada = false
 
     init(hoja: Hoja, archivo: Archivo) {
         _editor = StateObject(wrappedValue: EditorHoja(hoja: hoja, archivo: archivo))
@@ -102,7 +105,7 @@ struct HojaView: View {
                     }
                     Group {
                         if practica {
-                            EnunciadoView(editor: editor)
+                            PanelPracticaView(editor: editor)
                         } else {
                             PanelAsientosView(editor: editor)
                         }
@@ -188,6 +191,18 @@ struct HojaView: View {
         }
     }
 
+    /// Abre o cierra la calculadora; si estaba minimizada, la abre entera.
+    private func alternarCalculadora() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+            if calculadoraAbierta && calculadoraMinimizada {
+                calculadoraMinimizada = false
+            } else {
+                calculadoraAbierta.toggle()
+                calculadoraMinimizada = false
+            }
+        }
+    }
+
     // MARK: - Barra
 
     @ToolbarContentBuilder
@@ -211,6 +226,9 @@ struct HojaView: View {
         ToolbarItemGroup(placement: .topBarTrailing) {
             if editor.leyendo {
                 ProgressView()
+            }
+            Button(action: alternarCalculadora) {
+                Label("Calculadora", systemImage: "plus.forwardslash.minus")
             }
             if modo == .lienzo {
                 if editor.esPractica && panelVisible {

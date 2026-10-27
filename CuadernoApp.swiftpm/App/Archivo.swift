@@ -18,6 +18,8 @@ struct Hoja: Codable, Identifiable {
     var enunciado: [PaginaEnunciado] = []
     /// Lo escrito encima del enunciado (`PKDrawing.dataRepresentation()`).
     var notas: Data?
+    /// La hoja de cálculos de la práctica (`PKDrawing.dataRepresentation()`).
+    var calculos: Data?
 
     static func nueva(apertura: Bool, practica: Bool = false) -> Hoja {
         Hoja(id: UUID(), creada: Date(), modificada: Date(),
@@ -27,11 +29,12 @@ struct Hoja: Codable, Identifiable {
 
     var dibujo: PKDrawing { (try? PKDrawing(data: tinta)) ?? PKDrawing() }
     var dibujoNotas: PKDrawing { notas.flatMap { try? PKDrawing(data: $0) } ?? PKDrawing() }
+    var dibujoCalculos: PKDrawing { calculos.flatMap { try? PKDrawing(data: $0) } ?? PKDrawing() }
 
     var resueltos: [AsientoResuelto] { datos.resolver(leidos, empresa: Archivo.empresa) }
 
     private enum CodingKeys: String, CodingKey {
-        case id, creada, modificada, datos, tinta, leidos, practica, enunciado, notas
+        case id, creada, modificada, datos, tinta, leidos, practica, enunciado, notas, calculos
     }
 }
 
@@ -47,7 +50,8 @@ extension Hoja {
                   leidos: try c.decodeIfPresent([AsientoLeido].self, forKey: .leidos) ?? [],
                   practica: try c.decodeIfPresent(Bool.self, forKey: .practica) ?? false,
                   enunciado: try c.decodeIfPresent([PaginaEnunciado].self, forKey: .enunciado) ?? [],
-                  notas: try c.decodeIfPresent(Data.self, forKey: .notas))
+                  notas: try c.decodeIfPresent(Data.self, forKey: .notas),
+                  calculos: try c.decodeIfPresent(Data.self, forKey: .calculos))
     }
 }
 

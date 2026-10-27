@@ -20,6 +20,8 @@ final class EditorHoja: ObservableObject {
     private(set) var dibujo: PKDrawing
     /// Lo escrito encima del enunciado, en el modo práctica.
     var notas: PKDrawing
+    /// La hoja de cálculos, en el modo práctica.
+    var calculos: PKDrawing
     let archivo: Archivo
     private var lectura: Task<Void, Never>?
     private var guardado: Task<Void, Never>?
@@ -33,6 +35,7 @@ final class EditorHoja: ObservableObject {
         self.archivo = archivo
         dibujo = hoja.dibujo
         notas = hoja.dibujoNotas
+        calculos = hoja.dibujoCalculos
         imagenes.countLimit = 8
     }
 
@@ -139,7 +142,10 @@ final class EditorHoja: ObservableObject {
 
     func guardar() {
         hoja.tinta = dibujo.dataRepresentation()
-        if hoja.practica { hoja.notas = notas.dataRepresentation() }
+        if hoja.practica {
+            hoja.notas = notas.dataRepresentation()
+            hoja.calculos = calculos.dataRepresentation()
+        }
         archivo.guardar(hoja)
     }
 
