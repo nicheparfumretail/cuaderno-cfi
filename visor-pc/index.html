@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuaderno CFI · Visor</title>
+<style>
+  :root {
+    --fondo: #f7f7f5; --papel: #ffffff; --tinta: #1d1d1f; --suave: #6e6e73;
+    --linea: #e2e2e0; --acento: #4b4ad6; --bien: #1f8a4c; --mal: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fondo: #161618; --papel: #1f1f22; --tinta: #ececee; --suave: #9a9aa0;
+      --linea: #34343a; --acento: #8f8ef5; --bien: #4cc37f; --mal: #ef6f61;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--tinta);
+         font: 15px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  header { padding: 20px 24px 12px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  h1 { font-size: 20px; margin: 0 16px 0 0; }
+  select, button, label.boton { font: inherit; padding: 6px 12px; border-radius: 8px;
+         border: 1px solid var(--linea); background: var(--papel); color: var(--tinta); cursor: pointer; }
+  nav { display: flex; gap: 4px; padding: 0 24px; border-bottom: 1px solid var(--linea); }
+  nav button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; }
+  nav button.activa { border-bottom-color: var(--acento); color: var(--acento); font-weight: 600; }
+  main { padding: 20px 24px 48px; max-width: 1000px; }
+  .vacio { border: 2px dashed var(--linea); border-radius: 12px; padding: 48px 24px; text-align: center; color: var(--suave); }
+  .vacio.encima { border-color: var(--acento); color: var(--acento); }
+  table { width: 100%; border-collapse: collapse; background: var(--papel); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 5px 10px; text-align: left; }
+  th { font-size: 12px; color: var(--suave); font-weight: 600; border-bottom: 1px solid var(--linea); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cab td { padding-top: 14px; font-size: 13px; color: var(--suave); border-top: 1px solid var(--linea); }
+  .cab td b { color: var(--tinta); }
+  .haber { padding-left: 34px; }
+  .cuenta { cursor: pointer; }
+  .cuenta:hover { color: var(--acento); }
+  .total td { font-weight: 600; border-top: 2px solid var(--tinta); }
+  .t { display: grid; grid-template-columns: 1fr 1fr; background: var(--papel); border-radius: 10px; padding: 12px; }
+  .t > div { padding: 8px 14px; }
+  .t > div:first-child { border-right: 2px solid var(--tinta); }
+  .t h3 { margin: 0 0 8px; text-align: center; font-size: 14px; border-bottom: 2px solid var(--tinta); padding-bottom: 6px; }
+  .mov { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  .mov span:first-child { color: var(--suave); }
+  .saldo { margin-top: 14px; font-weight: 600; font-size: 16px; }
+  .ok { color: var(--bien); font-weight: 600; } .ko { color: var(--mal); font-weight: 600; }
+  .nota { color: var(--suave); font-size: 13px; }
+  @media (max-width: 600px) { header, nav, main { padding-left: 16px; padding-right: 16px; } th, td { padding: 4px 6px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cuaderno CFI</h1>
+  <label class="boton">Abrir diario.json<input id="archivo" type="file" accept=".json,application/json" hidden></label>
+  <select id="empresa" hidden></select>
+  <span id="estado" class="nota"></span>
+</header>
+<nav id="pestanas" hidden>
+  <button data-vista="diario" class="activa">Diario</button>
+  <button data-vista="mayor">Mayor</button>
+  <button data-vista="balance">Balance de comprobación</button>
+</nav>
+<main id="vista">
+  <div class="vacio" id="soltar">
+    <p><b>Arrastra aquí el <code>diario.json</code></b> o pulsa «Abrir diario.json».</p>
+    <p class="nota">En el iPad: Más → Exportar diario → Guardar en Archivos (iCloud Drive).<br>
+      En el PC: descárgalo desde icloud.com → iCloud Drive y ábrelo aquí.</p>
+  </div>
+</main>
+<script>
+// Céntimos enteros: el JSON trae los importes como texto ("1185.8") y aquí no se usa coma flotante.
+const centimos = (texto) => {
+  let s = String(texto).trim(), signo = 1;
+  if (s.startsWith('-')) { signo = -1; s = s.slice(1); }
+  const [entera, dec = ''] = s.split('.');
+  const d = (dec + '000').slice(0, 3);
+  return signo * (Number(entera) * 100 + Number(d.slice(0, 2)) + (Number(d[2]) >= 5 ? 1 : 0));
+};
+const euros = (c) => {
+  if (!c) return '';
+  const a = Math.abs(c), e = Math.floor(a / 100), ct = a % 100;
+  const miles = String(e).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (c < 0 ? '-' : '') + miles + ',' + String(ct).padStart(2, '0');
+};
+const fecha = (iso) => iso.split('-').reverse().join('/');
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+let datos = null, vista = 'diario', cuentaMayor = null;
+const $ = (id) => document.getElementById(id);
+const nombre = (c) => (datos.nombresDeCuentas || {})[c];
+const etiqueta = (c) => `(${esc(c)}) ${esc(nombre(c) || '')}`;
+const asientos = () => datos.asientos.filter((a) => a.empresa === $('empresa').value)
+                                     .sort((a, b) => a.numero - b.numero);
+
+function cargar(texto, origen) {
+  try {
+    const leido = JSON.parse(texto);
+    if (!Array.isArray(leido.asientos)) throw new Error('no tiene "asientos"');
+    datos = leido;
+  } catch (e) { $('estado').textContent = 'No es un diario válido: ' + e.message; return; }
+  const empresas = [...new Set(datos.asientos.map((a) => a.empresa))].sort();
+  $('empresa').innerHTML = empresas.map((e) => `<option>${esc(e)}</option>`).join('');
+  $('empresa').hidden = empresas.length < 2;
+  $('pestanas').hidden = false;
+  $('estado').textContent = `${datos.asientos.length} asientos · ${origen}`;
+  try { localStorage.setItem('cuaderno-diario', texto); } catch (_) {}
+  pintar();
+}
+
+function pintar() {
+  if (!datos) return;
+  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('activa', b.dataset.vista === vista));
+  $('vista').innerHTML = { diario: verDiario, mayor: verMayor, balance: verBalance }[vista]();
+}
+
+function verDiario() {
+  const filas = asientos().map((a) => {
+    const ordenados = [...a.apuntes.filter((p) => p.lado === 'debe'), ...a.apuntes.filter((p) => p.lado === 'haber')];
+    const lineas = ordenados.map((p) => {
+      const det = p.detalle ? ` (${esc(p.detalle)})` : '';
+      const debe = p.lado === 'debe', imp = euros(centimos(p.importe));
+      return `<tr><td class="num">${debe ? imp : ''}</td>
+        <td class="cuenta ${debe ? '' : 'haber'}" data-cuenta="${esc(p.cuenta)}">${debe ? '' : 'a '}${etiqueta(p.cuenta)}${det}</td>
+        <td class="num">${debe ? '' : imp}</td></tr>`;
+    }).join('');
+    return `<tr class="cab"><td colspan="3"><b>Nº ${a.numero}</b> · ${fecha(a.fecha)} · ${esc(a.concepto)}</td></tr>${lineas}`;
+  }).join('');
+  return `<table><tr><th class="num">Debe</th><th>Cuenta</th><th class="num">Haber</th></tr>${filas}</table>
+    <p class="nota">Pulsa una cuenta para ver su mayor.</p>`;
+}
+
+function movimientos(cuenta) {
+  return asientos().flatMap((a) => a.apuntes.filter((p) => p.cuenta === cuenta)
+    .map((p) => ({ numero: a.numero, detalle: p.detalle, lado: p.lado, c: centimos(p.importe) })));
+}
+
+function verMayor() {
+  const usadas = [...new Set(asientos().flatMap((a) => a.apuntes.map((p) => p.cuenta)))].sort();
+  if (!usadas.includes(cuentaMayor)) cuentaMayor = usadas[0];
+  const opciones = usadas.map((c) => `<option value="${esc(c)}" ${c === cuentaMayor ? 'selected' : ''}>${etiqueta(c)}</option>`).join('');
+  const movs = movimientos(cuentaMayor);
+  const lado = (l) => movs.filter((m) => m.lado === l)
+    .map((m) => `<div class="mov"><span>(${m.numero}) ${esc(m.detalle || '')}</span><span class="num">${euros(m.c)}</span></div>`).join('');
+  const sd = movs.filter((m) => m.lado === 'debe').reduce((s, m) => s + m.c, 0);
+  const sh = movs.filter((m) => m.lado === 'haber').reduce((s, m) => s + m.c, 0);
+  const saldo = sd - sh;
+  const texto = saldo > 0 ? `Saldo deudor: ${euros(saldo)}` : saldo < 0 ? `Saldo acreedor: ${euros(-saldo)}` : 'Cuenta saldada (saldo 0)';
+  return `<p><select id="cuentaMayor">${opciones}</select></p>
+    <div class="t"><div><h3>Debe</h3>${lado('debe')}<div class="mov total"><b>Σ</b><b class="num">${euros(sd)}</b></div></div>
+    <div><h3>Haber</h3>${lado('haber')}<div class="mov total"><b>Σ</b><b class="num">${euros(sh)}</b></div></div></div>
+    <p class="saldo">${texto}</p>`;
+}
+
+function verBalance() {
+  const sumas = new Map();
+  for (const p of asientos().flatMap((a) => a.apuntes)) {
+    const s = sumas.get(p.cuenta) || { d: 0, h: 0 };
+    s[p.lado === 'debe' ? 'd' : 'h'] += centimos(p.importe);
+    sumas.set(p.cuenta, s);
+  }
+  const t = { d: 0, h: 0, sd: 0, sa: 0 };
+  const filas = [...sumas.keys()].sort().map((c) => {
+    const { d, h } = sumas.get(c), sd = Math.max(d - h, 0), sa = Math.max(h - d, 0);
+    t.d += d; t.h += h; t.sd += sd; t.sa += sa;
+    return `<tr><td class="cuenta" data-cuenta="${esc(c)}">${etiqueta(c)}</td><td class="num">${euros(d)}</td>
+      <td class="num">${euros(h)}</td><td class="num">${euros(sd)}</td><td class="num">${euros(sa)}</td></tr>`;
+  }).join('');
+  const cuadra = t.d === t.h && t.sd === t.sa;
+  return `<table><tr><th>Cuenta</th><th class="num">Σ Debe</th><th class="num">Σ Haber</th>
+      <th class="num">Saldo deudor</th><th class="num">Saldo acreedor</th></tr>${filas}
+    <tr class="total"><td>Totales</td><td class="num">${euros(t.d)}</td><td class="num">${euros(t.h)}</td>
+      <td class="num">${euros(t.sd)}</td><td class="num">${euros(t.sa)}</td></tr></table>
+    <p class="${cuadra ? 'ok' : 'ko'}">${cuadra ? '✓ Cuadra: sumas y saldos iguales en los dos lados' : '✗ No cuadra'}</p>`;
+}
+
+$('archivo').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (f) cargar(await f.text(), f.name);
+});
+$('empresa').addEventListener('change', pintar);
+$('pestanas').addEventListener('click', (e) => {
+  if (e.target.dataset.vista) { vista = e.target.dataset.vista; pintar(); }
+});
+$('vista').addEventListener('click', (e) => {
+  const celda = e.target.closest('[data-cuenta]');
+  if (celda) { cuentaMayor = celda.dataset.cuenta; vista = 'mayor'; pintar(); }
+});
+$('vista').addEventListener('change', (e) => {
+  if (e.target.id === 'cuentaMayor') { cuentaMayor = e.target.value; pintar(); }
+});
+document.addEventListener('dragover', (e) => { e.preventDefault(); $('soltar')?.classList.add('encima'); });
+document.addEventListener('dragleave', () => $('soltar')?.classList.remove('encima'));
+document.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f) cargar(await f.text(), f.name);
+});
+try {
+  const guardado = localStorage.getItem('cuaderno-diario');
+  if (guardado) cargar(guardado, 'último abierto');
+} catch (_) {}
+</script>
+</body>
+</html>

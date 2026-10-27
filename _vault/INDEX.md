@@ -8,6 +8,7 @@ Punto de entrada. Antes de tocar código o tomar una decisión, se lee lo que to
 | Qué es la app y hacia dónde va | [CONSTRUCCION/VISION.md](CONSTRUCCION/VISION.md) |
 | Cómo está montada | [CONSTRUCCION/ARQUITECTURA.md](CONSTRUCCION/ARQUITECTURA.md) |
 | Por qué se decidió cada cosa | [CONSTRUCCION/DECISIONES.md](CONSTRUCCION/DECISIONES.md) |
+| Cómo se reconoce la letra y por qué falla | [CONSTRUCCION/ESTUDIO-RECONOCIMIENTO.md](CONSTRUCCION/ESTUDIO-RECONOCIMIENTO.md) |
 | Qué toca ahora | [CONSTRUCCION/ROADMAP.md](CONSTRUCCION/ROADMAP.md) |
 | Qué se hizo cada día | [CONSTRUCCION/BITACORA.md](CONSTRUCCION/BITACORA.md) |
 | Qué hace cada módulo de código | [CODIGO/INDEX_CODIGO.md](CODIGO/INDEX_CODIGO.md) |

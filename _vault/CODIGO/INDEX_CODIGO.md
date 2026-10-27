@@ -35,3 +35,97 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Core/` | Copia del motor (ADR-005); se regenera con `py scripts/sincronizar_core.py` |
 | `visor-pc/index.html` | Visor del diario en el PC (ADR-006) |
 | `.github/workflows/ci.yml` | CI: tests del motor en Linux, copia al día y compilación de la app en macOS |
+
+## Actualización 25-10-2026 (noche) — ADR-008
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/LectorAsientos.swift` | Palabras con posición → asientos en el formato de Gema (fecha, Debe/Haber por mitad, código entre paréntesis, importe) |
+| `Tests/CuadernoCoreTests/LectorAsientosTests.swift` | El ejemplo de la foto de Iulian y confusiones típicas de la letra (S→5, o→0, fecha troceada) |
+| `CuadernoApp.swiftpm/Asientos/HojaView.swift` | Diario en limpio de la hoja, en vivo, con cuadre y lo no leído en rojo |
+| `CuadernoApp.swiftpm/Lienzo/Reconocedor.swift` | Ahora solo convierte tinta en palabras con posición (Vision) |
+| ~~`Asientos/Borrador.swift`, `Asientos/EditorAsientoView.swift`~~ | Eliminados: ya no hay formulario |
+
+## Actualización 25-10-2026 (noche, 3) — ADR-010
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/DatosHoja.swift` | Zonas ajustables, fechas (a mano → leída → la del anterior), apertura con aviso y recomendaciones |
+| `Sources/CuadernoCore/LectorAsientos.swift` | Ahora también separa asientos por rayas (`esSeparador`) y lee con zonas a medida |
+| `Tests/CuadernoCoreTests/DatosHojaTests.swift` | Rayas, fechas heredadas, zonas, apertura (con la de Túria) y recomendaciones |
+| `CuadernoApp.swiftpm/App/Archivo.swift` | Hojas guardadas (una por archivo) |
+| `CuadernoApp.swiftpm/Inicio/` | Inicio con menú circular e histórico |
+| `CuadernoApp.swiftpm/Hoja/` | Hoja abierta: lectura en segundo plano, panel plegable, modo En limpio |
+| `CuadernoApp.swiftpm/Lienzo/` | Página de ancho fijo con zoom, cabecera con asas de las zonas, rayas fuera de Vision |
+| `CuadernoApp.swiftpm/Asientos/` | Panel de lo reconocido, vista En limpio, apuntes, mayor y balance |
+| `Sources/CuadernoCore/AgrupadorTrazos.swift` | Cajas de los trazos → renglones por franja (Debe, centro, Haber), siguiendo renglones torcidos y pegando comas y puntos |
+| `Sources/CuadernoCore/LectorAsientos.swift` | Ahora lee varias candidatas por renglón y usa la partida doble para elegir (`cuadrar`, `seConfunden`, `cuentaSinImporte`) |
+| `CuadernoApp.swiftpm/Lienzo/Reconocedor.swift` | Ahora lee cada renglón aparte (dos imágenes, 5 candidatas) y guarda lo leído por renglón |
+| `Tests/CuadernoCoreTests/ReconocimientoTests.swift` | La captura de las 20:49 (814/819, «0,00 … (472)»), renglones de tinta torcidos, comas y puntos |
+| `Sources/CuadernoCore/FechaEscrita.swift` | La fecha del centro: día, mes y año con una o dos cifras; barras leídas como 1 o 7 |
+| `Sources/CuadernoCore/LectorAsientos+Cuadrar.swift` | La partida doble como prueba de la lectura (sacado de `LectorAsientos` para que no pase de 500 líneas) |
+| `Sources/CuadernoCore/Correccion.swift` | Apuntes corregidos o descartados a mano en el panel y cómo se aplican al resolver la hoja |
+| `CuadernoApp.swiftpm/Asientos/CorregirApunteView.swift` | Hoja «Corregir apunte»: lado, cuenta e importe con Scribble o teclado |
+| `Tests/CuadernoCoreTests/CorreccionesTests.swift` | Fechas de la captura de las 21:18 y correcciones (aplicar, sustituir, descartar, recuperar, hojas viejas) |
+| `Sources/CuadernoCore/NombreCuenta.swift` | El nombre escrito como prueba del código: palabras del PGC, parecido entre palabras y códigos a una cifra parecida |
+| `Sources/CuadernoCore/AgrupadorTrazos.swift` | Ahora también corta cada renglón en trozos por los huecos |
+| `CuadernoApp.swiftpm/Asientos/ApunteEditable.swift` | El apunte corregible en línea (cifra y cuenta como campos, menú al mantener pulsado), igual en el panel y en En limpio. Sustituye a `ApuntesView` y `CorregirApunteView` |
+| `Sources/CuadernoCore/PlanDeCuentasPGC.swift` | Cuadro de cuentas del PGC (grupos 1 a 7, de tres cifras, y algunas de cuatro) para elegir una cuenta por su nombre; generado con un script que comprueba que no haya códigos repetidos |
+| `Sources/CuadernoCore/Correccion.swift` | Ahora también mueve apuntes de un asiento a otro (`mover`, `destino`) |
+| `CuadernoApp.swiftpm/Asientos/ApunteFila.swift` | El apunte en el panel y en En limpio: se toca para corregirlo y se arrastra por su asa; zona para soltar por asiento (izquierda Debe, derecha Haber). Sustituye a `ApunteEditable` |
+| `CuadernoApp.swiftpm/Asientos/EditorApunteMini.swift` | Mini ventana: lado, cuenta con su nombre, buscador del cuadro de cuentas, importe y ✓ |
+| `Tests/CuadernoCoreTests/CorreccionesTests.swift` | Ahora también: arrastrar a otro asiento y al otro lado, destino que desaparece y cuadro de cuentas |
+
+## Actualización 26-10-2026 — ADR-015
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/Mayor.swift` | Ahora cada movimiento dice sus contrapartidas (las cuentas del otro lado del asiento) |
+| `Sources/CuadernoCore/Revision.swift` | La corrección de una práctica: si cuadra, cuentas que no están en el PGC y lo que no se ha entendido |
+| `Tests/CuadernoCoreTests/RevisionTests.swift` | Corrección de un asiento bien, cuenta inexistente (488) frente a subcuenta (5720), descuadre y contrapartidas del mayor |
+| `CuadernoApp.swiftpm/Hoja/InteraccionHoja.swift` | Lo que pasa en pantalla y no se guarda: rueda, mini ventana, mayor abierto, salto y resaltado amarillo |
+| `CuadernoApp.swiftpm/Hoja/RuedaApunteView.swift` | La rueda del apunte (modificar, mayor, cambiar de lado, lo leído, descartar) |
+| `CuadernoApp.swiftpm/Asientos/ArrastreApunte.swift` | Arrastre al momento por el asa: dónde está cada asiento, en qué lado cae y la ficha que sigue al dedo |
+| `CuadernoApp.swiftpm/Asientos/MayorView.swift` | Mayor con diagrama de asientos, tabla entera o cuenta en T; tocar un asiento lleva a él (sale de `LibrosView`) |
+| `CuadernoApp.swiftpm/Asientos/DiarioPDF.swift` | En limpio (o la solución) en PDF A4 |
+| `CuadernoApp.swiftpm/Asientos/LimpioView.swift` | Ahora con zoom, salto con resaltado y tres usos: diario, práctica (sin cuadres) y solución |
+| `CuadernoApp.swiftpm/Practica/` | Modo práctica: importar el enunciado (`ImportadorEnunciado`), guardarlo con la hoja, lienzo de notas con las páginas debajo de la tinta, panel del enunciado y vistas de la solución |
+
+## Actualización 26-10-2026 (2) — ADR-016
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/Importe.swift` | `formatear` siempre con dos decimales |
+| `CuadernoApp.swiftpm/Practica/LienzoNotasView.swift` | Ahora con `VistaEnunciado`: páginas detrás, lienzo transparente delante y menú de pegar al mantener el dedo |
+| `CuadernoApp.swiftpm/Asientos/DiarioPDF.swift` | PDF dibujado con las vistas de En limpio (claro u oscuro) y `Compartir`, la hoja de compartir del sistema con un archivo |
+| `CuadernoApp.swiftpm/Asientos/LimpioView.swift` | `AsientoLimpio` sirve para la pantalla (con `Interactivo`) y para el PDF (quieto) |
+| `CuadernoApp.swiftpm/Asientos/ApunteFila.swift` | `FilaLimpia`: el apunte en limpio, igual en la pantalla y en el PDF |
+| `CuadernoApp.swiftpm/Asientos/MayorView.swift` | Se abre en T con el saldo; pestaña «Contrapartida» con el nombre de cada cuenta |
+
+## Actualización 26-10-2026 (3) — ADR-017
+
+| Archivo | Qué hace |
+|---|---|
+| `CuadernoApp.swiftpm/Practica/EdicionPaginas.swift` | Nuevo: elegir, mover y redimensionar una página del enunciado con el dedo (`GestoPagina`) y su marco con «Al ancho» y «Quitar» (`CapaSeleccion`) |
+| `CuadernoApp.swiftpm/Practica/EditorHoja+Enunciado.swift` | Cada página con su sitio; `colocarPagina` mueve o escala también lo escrito encima; `quitarPagina`, `ajustarAlAncho` |
+| `CuadernoApp.swiftpm/Practica/LienzoNotasView.swift` | Coloca las páginas según su sitio (o donde está el dedo) y en su orden; capa del marco encima del lienzo |
+| `CuadernoApp.swiftpm/App/Archivo.swift` | `PaginaEnunciado` guarda `x`, `y` y `anchoMostrado` (opcionales: las hojas de antes se siguen abriendo) |
+| `CuadernoApp.swiftpm/Hoja/HojaView.swift` | Flecha «Inicio» propia; `SinGestoAtras` apaga los gestos de volver deslizando |
+
+## Actualización 27-10-2026 — ADR-018
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/Calculadora.swift` | Nuevo: la calculadora, tecla a tecla (escribir, operadores, funciones, memoria, borrar) |
+| `Sources/CuadernoCore/Calculadora+Cuenta.swift` | Nuevo: lee lo escrito con la prioridad de siempre y lo calcula (Decimal; Double solo en las funciones científicas) |
+| `Sources/CuadernoCore/Calculadora+Texto.swift` | Nuevo: los números a la española y en notación científica |
+| `Tests/CuadernoCoreTests/CalculadoraTests.swift` | Nuevo: IVA con %, interés compuesto, decimales exactos, funciones, memoria |
+| `CuadernoApp.swiftpm/Calculadora/CapaCalculadora.swift` | Nuevo: la ventana flotante (arrastrar, minimizar, recordar el sitio) |
+| `CuadernoApp.swiftpm/Calculadora/TecladoCalculadora.swift` | Nuevo: pantalla y teclas como la de Apple, básica y científica |
+| `CuadernoApp.swiftpm/Practica/PanelPracticaView.swift` | Nuevo: el panel de la práctica partido en Enunciado y Cálculos |
+| `CuadernoApp.swiftpm/Practica/CalculosView.swift` | Nuevo: la mitad de cálculos con su barra de acciones rápidas |
+| `CuadernoApp.swiftpm/Practica/LienzoCalculosView.swift` | Nuevo: el lienzo de cálculos sobre papel cuadriculado |
+| `CuadernoApp.swiftpm/Practica/EnunciadoView.swift` | Se minimiza a su barra |
+| `CuadernoApp.swiftpm/App/Archivo.swift` | `Hoja.calculos` (opcional: las hojas de antes se siguen abriendo) |
+| `CuadernoApp.swiftpm/Hoja/HojaView.swift` | Botón ± de la calculadora; el panel de la práctica es `PanelPracticaView` |
+| `CuadernoApp.swiftpm/Inicio/InicioView.swift` | La calculadora flotante, encima de todas las pantallas |

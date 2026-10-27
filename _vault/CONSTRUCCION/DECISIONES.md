@@ -37,3 +37,123 @@
 - Cierra, para la fase 1, la pregunta abierta «Reconocimiento».
 - La posición dice el lado: lo escrito en la columna izquierda es Debe; en la central, la cuenta; en la derecha, Haber. Cada fila es un apunte. Lo que Vision no entiende no se inventa: se enseña en el editor para corregirlo a mano.
 - Claude por API queda para cuando se vea en la práctica qué falla con Vision.
+
+## ADR-008 · El lienzo se lee en el formato de Gema y se pasa a limpio solo (25-10-2026)
+- Sustituye la plantilla de tres columnas de ADR-007 (lo de usar Vision en el iPad se mantiene).
+- Formato (foto de Iulian): la **fecha en el centro abre cada asiento**; **mitad izquierda = Debe** («1.000,00 Proveedores (400)»); **mitad derecha = Haber** («(572) Bancos 1.000,00»); la «a» va en el centro. El código de cuenta va entre paréntesis; el nombre se ignora porque manda el código.
+- La lectura (posiciones → asientos) vive en el motor (`LectorAsientos`) y tiene tests; la app solo pasa la tinta por Vision.
+- Sin botón: la hoja se relee entera 1,2 s después del último trazo. Los asientos que cuadran forman el diario; lo que no se entiende sale en rojo y se corrige reescribiendo en la tinta.
+
+## ADR-009 · El código llega al iPad con un Atajo que descarga un zip, no con Working Copy (25-10-2026)
+- Sustituye la vía de ADR-004 (GitHub → Working Copy → Swift Playgrounds).
+- Contexto: abrir `CuadernoApp.swiftpm` desde la carpeta de Working Copy cuelga Swift Playgrounds («Se ha producido un error al mostrar los documentos»), incluso después de reinstalarlo. Al desactivar la ubicación de Working Copy en Archivos, Swift Playgrounds vuelve a funcionar.
+- Decisión: cuando el CI sale en verde en la rama de prueba, publica `CuadernoApp.zip` en la publicación fija `ultima`. Un Atajo del iPad lo descarga, lo descomprime y sustituye el proyecto en la carpeta Playgrounds. Se puede lanzar al abrir Swift Playgrounds (automatización).
+- Límite: el enlace solo funciona con el repositorio **público**. Si pasa a privado, el Atajo necesita una clave de GitHub de solo lectura, que se pega en el iPad y nunca en el repositorio.
+- La app de GitHub para iPad no sirve: no descarga repositorios a Archivos.
+
+## ADR-010 · Hojas guardadas, rayas que separan asientos y fecha elegida a mano (25-10-2026)
+- Pedido por Iulian tras la primera prueba con su letra (Vision leyó bien «1000,00 572 | 430 1000»).
+- **Inicio** sin nada cargado: botón «+» con un arco de opciones (Añadir asiento, Ver histórico), como la paleta del Pencil Pro. «Añadir asiento» pregunta si es el asiento de apertura.
+- **Cada hoja se guarda** aparte (`Documentos/hojas/<id>.json`: tinta, datos y lo último leído) y se reabre desde el histórico.
+- **Una raya horizontal** (trazo largo y plano) separa un asiento del siguiente. La fecha escrita también separa, pero ya no hace falta.
+- **La fecha la elige Iulian** en el panel (su letra para fechas no se lee bien). Si no la elige, se usa la leída y, si tampoco hay, **la del asiento anterior**.
+- **Página de ancho fijo** (1000 puntos) que la pantalla escala: la tinta no se descoloca al plegar el panel. Zoom hasta 1,8×. Las zonas Debe | centro | Haber se ensanchan con asas y se guardan en cada hoja.
+- **Nunca bloquea:** lo que no se entiende sale como recomendación («falta el Haber», «solo leo un número») y se puede seguir escribiendo.
+- **Apertura:** si el primer asiento lleva cuentas de los grupos 6 a 9, se avisa (la apertura solo reabre cuentas de balance). Es un aviso y no impide guardar el asiento.
+- Vista **«En limpio»**: la hoja con letra de apuntes, en el formato de clase.
+
+## ADR-011 · Se lee por renglones de tinta y la partida doble elige entre lecturas (25-10-2026)
+- Pedido por Iulian tras la captura de las 20:49: un retoque pequeño descuadraba la hoja. El estudio completo está en [ESTUDIO-RECONOCIMIENTO](ESTUDIO-RECONOCIMIENTO.md).
+- Los renglones se deciden con la geometría de los trazos (`AgrupadorTrazos`, en el motor), no con las cajas de Vision. Cada renglón se lee aparte, dos veces y con varias candidatas, y la lectura se guarda por renglón.
+- Si un asiento no cuadra: la candidata de Vision que lo hace cuadrar se toma avisando; una cifra parecida que Vision no propuso solo se pregunta (puede ser un error real de Iulian, y eso no se tapa); a una fila con cuenta y sin importe se le dice cuánto falta.
+- Claude por API queda como capa opcional para lo que siga sin cuadrar, pendiente de que Iulian lo apruebe.
+
+## ADR-012 · Fechas de cualquier forma y correcciones a mano en el panel (25-10-2026)
+- Pedido por Iulian tras la captura de las 21:18 («01/10/25» se leyó «01/10125»).
+- **Fecha:** siempre día, mes y año, en ese orden. El día y el mes llevan una o dos cifras y el año dos o cuatro. Cualquier cosa que no sea cifra separa. Si faltan separadores, se prueba a tomar un 1 (o un 7) como barra; solo se acepta si sale **una única** fecha válida. Si no, se pide con el selector.
+- **Capa 2 del estudio de reconocimiento:** tocar un apunte o una fila sin entender abre «Corregir apunte» (lado, cuenta, importe; Scribble o teclado). Se puede descartar algo que no era un apunte y volver a lo leído.
+- La corrección se guarda en la hoja (`DatosHoja.correcciones`) junto a lo que se leyó y la tinta no se toca. Si se reescribe y se lee otra cosa, deja de aplicarse sola. Como las fechas a mano, va por la posición del asiento en la hoja.
+
+## ADR-013 · Corregir en línea, en el panel y en En limpio; el nombre escrito confirma la cuenta (25-10-2026)
+- Sustituye la hoja «Corregir apunte» de ADR-012. A Iulian le resultaba incómoda, y además abría con el lado equivocado.
+- **Corregir donde está:** la cifra y la cuenta de cada apunte son campos. Se tocan y se escribe encima con el Pencil (el texto queda seleccionado, así que lo nuevo lo sustituye). Al salir del campo se guarda. Si lo escrito no es una cuenta o un importe válidos, vuelve lo que había.
+- Manteniendo pulsado: pasar al otro lado, ver el mayor, volver a lo leído o descartar. Las filas sin entender son editables en naranja.
+- **Bidireccional:** el panel del lienzo y En limpio usan el mismo componente y guardan en `DatosHoja.correcciones`. Lo corregido en una vista sale en la otra.
+- **Lectura por trozos:** cada renglón se corta por sus huecos (importe, nombre, código) y cada trozo se lee aparte. Un número suelto se lee mejor solo («819 … (472)» salía «89»).
+- **El nombre confirma el código:** si el nombre escrito encaja mejor con otra cuenta del PGC a una cifra parecida del código leído, se toma esa y se avisa («leo la 608, pero pone mercaderías: tomo la 600»).
+
+## ADR-014 · Mini ventana para corregir, arrastrar apuntes entre asientos y cuadro de cuentas completo (25-10-2026)
+- Pedido por Iulian a las 23:11. Corregir escribiendo en los propios campos le resultaba incómodo, sobre todo cuando el reconocimiento dudaba.
+- **Mini ventana** al tocar o mantener pulsado un apunte (sustituye la edición en línea de ADR-013). Lleva: Debe/Haber, número de cuenta (el nombre sale solo), importe y ✓. Viene rellena con lo leído, también en una fila sin entender (la cuenta y el primer número que puede ser importe). Si no se sabe el número, se toca el nombre: se escribe una parte del nombre o del número, o se elige del cuadro de cuentas. Abajo: mayor, volver a lo leído y descartar.
+- **Arrastrar:** cada apunte tiene un asa (≡). Se suelta en cualquier asiento: en la mitad izquierda va al Debe y en la derecha al Haber. Funciona en el panel y en En limpio. Se guarda como corrección con `destino` en el asiento donde se leyó: «volver a lo leído» lo devuelve a su sitio. Si el asiento destino desaparece, vuelve al suyo.
+- **Cuadro de cuentas del PGC** (`PlanDeCuentasPGC.swift`): las cuentas de tres cifras de los grupos 1 a 7, más las de cuatro cifras de IVA y amortización acumulada. Los nombres de los apuntes de clase mandan cuando hay los dos. Los nombres se han escrito de memoria: si alguno no coincide con el PGC oficial o con los apuntes de Gema, se corrige la fila.
+- **Fecha editable también en En limpio**, con el mismo selector que el panel.
+
+## ADR-015 · Modo práctica, rueda del apunte, mayor con diagrama y En limpio en PDF (26-10-2026)
+- Pedido por Iulian tras probar la mini ventana: le gustaron el histórico y el libro mayor.
+- **Rueda** al mantener pulsado un apunte, como la paleta del Pencil Pro: Modificar (abre la mini ventana), Libro mayor, Al Debe / Al Haber, Lo leído y Descartar. Tocar sigue abriendo la mini ventana.
+- **Arrastre al momento:** el asa ≡ se coge y se mueve sin mantenerla pulsada. Es un gesto propio de la app y no el arrastrar del sistema, que obligaba a esperar antes de mover. Encima del asiento de debajo del dedo se ve «Al Debe | Al Haber». Para llevar un apunte lejos (del asiento 2 al 40), «Modificar → Asiento».
+- **Mayor:** arriba, el recorrido de la cuenta como diagrama. Cada parada es un asiento, con el Debe encima de la línea y el Haber debajo, las contrapartidas y el saldo entre parada y parada. Debajo va la tabla entera (fecha, nº, contrapartida, Debe, Haber, saldo), o la cuenta en T. Tocar un asiento cierra el mayor, lleva a él y lo resalta en amarillo un segundo y medio. El motor añade `contrapartidas` a cada movimiento.
+- **En limpio:** zoom (pellizco o − / +, del 60 % al 300 %) y exportar a PDF. El PDF es A4, ningún asiento se parte entre dos páginas y al final van las sumas del diario.
+- **Practicar ejercicio** (en el «+»): una hoja como las demás, pero el panel es el enunciado. Admite capturas (pegadas o de Fotos), PDF o Word, una debajo de otra, con notas a mano encima y en los márgenes. El panel se ensancha hasta el 85 % o se pone a pantalla completa.
+- En una práctica no se dice si un asiento cuadra mientras se escribe. Eso lo dice la vista **«Solución»**: partida doble, cuentas que no existen en el PGC (`AsientoResuelto.revision`) y sumas del diario.
+- Límite: sin la solución del ejercicio, la app no sabe si un asiento corresponde al enunciado (la cuenta o el importe que pedía). Para eso haría falta Claude por API (de pago; la clave se escribe en el iPad) o la solución oficial. Pendiente de que Iulian decida.
+
+## ADR-016 · Importes con dos decimales, PDF igual que En limpio y mayor en T de entrada (26-10-2026)
+- Pedido por Iulian al probar ADR-015.
+- **Todos los importes con dos decimales**, también los redondos («1.000,00», «210,00»). Sustituye la regla anterior de `Importe.formatear` (sin decimales cuando eran cero). Vale para la pantalla, los avisos, el PDF y el visor del PC.
+- **El PDF se ve como En limpio:** se dibujan las mismas vistas (`AsientoLimpio`, `FilaLimpia`), quietas: la fecha como texto y sin asas. Si el iPad está en modo oscuro, el PDF sale con fondo negro, como lo ve Iulian. Las páginas tienen el ancho de En limpio (1000 puntos) y la proporción de un A4.
+- **Compartir un archivo, no datos:** el PDF se escribe en un archivo y se abre la hoja de compartir del sistema. Así salen las apps que abren PDF, como Freenotes, además de Guardar en Archivos. Mientras se prepara se ve una rueda de espera.
+- **Mayor:** se abre en T, con las sumas y el saldo debajo del lado que suma más (saldo deudor bajo el Debe, acreedor bajo el Haber). La otra pestaña se llama «Contrapartida» y pone cada cuenta con su nombre («472 HP, IVA soportado»), no solo el número. En la T, cada movimiento lleva su asiento y sus contrapartidas.
+- **Rueda:** disco esmerilado y centro casi opaco, para que la cuenta no se mezcle con el texto de detrás.
+- **Enunciado:** las páginas van en una vista detrás de un lienzo transparente (antes iban dentro del lienzo opaco y no se veían). Manteniendo el dedo sale «Pegar», sin el aviso de permiso.
+
+## ADR-017 · Páginas del enunciado sueltas y salir de la hoja solo con la flecha (26-10-2026)
+- Pedido por Iulian tras ADR-016.
+- **Cada página del enunciado guarda su sitio y su ancho** (`PaginaEnunciado.x`, `y`, `anchoMostrado`, en puntos de página). Antes iban siempre una debajo de otra. Las hojas guardadas antes no tienen estos datos: se siguen viendo una debajo de otra, y al tocar cualquier página se fija el sitio de todas, para que ninguna se recoloque sola.
+- **Se edita con el dedo; el Pencil sigue escribiendo:**
+  - tocar una página → marco azul con una bola en cada esquina y una barrita con «Al ancho» y «Quitar»;
+  - arrastrar dentro de la página elegida → se mueve;
+  - tirar de una esquina → se agranda o se achica sin deformarse, con la esquina de enfrente quieta;
+  - tocar fuera, tocarla otra vez o empezar a escribir → se suelta.
+  Fuera de la página elegida, el dedo sigue desplazando y ampliando el enunciado.
+- **Lo escrito encima va con la página:** los trazos cuyo centro cae dentro de la página se mueven y se escalan con ella. Mientras dura el arrastre viajan como imagen y al soltar vuelven al lienzo. Al quitar una página, lo escrito encima se borra con ella; por eso «Quitar» pide confirmación.
+- **Quitar ya no sube lo de debajo**, tampoco al quitar un adjunto entero desde el clip. Con las páginas sueltas, cerrar el hueco movería cosas que Iulian ha colocado a mano. Esto sustituye lo que decía ADR-015.
+- **De una hoja solo se sale con la flecha «Inicio».** Deslizar hacia atrás está apagado, tanto desde el borde como el gesto de iPadOS 26 desde cualquier punto. Saltaba al arrastrar la separación del panel. Al volver al inicio, los gestos se encienden otra vez.
+
+## ADR-018 · Panel de práctica partido en dos y calculadora flotante (27-10-2026)
+Pedido por Iulian:
+- poder minimizar el enunciado;
+- una hoja para hacer cuentas a mano;
+- una calculadora científica como la de Apple que flote sin tapar el lienzo.
+
+**Panel de la práctica partido en dos: Enunciado y Cálculos.**
+- Cada mitad se minimiza a su barra y la otra ocupa todo el panel; siempre queda una abierta.
+- Con ⇅ se cambia cuál va arriba. La separación se arrastra para repartir el alto.
+- Cómo se deja se recuerda para la próxima práctica (preferencias del iPad, no de la hoja).
+
+**La hoja de Cálculos** es un lienzo de PencilKit sobre papel cuadriculado, como el de Notas.
+- Sirve para las cuentas que no son asientos: cuotas de IVA, prorratas, amortizaciones.
+- Se guarda con la hoja (`Hoja.calculos`) pero **no se lee**: no son asientos y no cuentan en la Solución.
+- Acciones rápidas en su barra: deshacer, rehacer, borrar todo, cambiar de mitad y minimizar.
+- «Borrar todo» se puede deshacer.
+- Deshacer usa el deshacer del sistema, el mismo de la paleta del Pencil. Por eso deshace lo último escrito, sea en el lienzo que sea.
+
+**Calculadora: la de Apple, no; una propia con su aspecto.**
+- iPadOS no deja que otra app se quede flotando encima de esta (solo los vídeos en imagen dentro de imagen).
+- Tampoco hay forma pública de meter la Calculadora dentro de una app.
+- La propia va en la raíz de la app, por encima de todas las pantallas:
+  - se abre con el botón ± de la barra de la hoja;
+  - se mueve arrastrando su barra y se minimiza a una píldora con el número de la pantalla;
+  - recuerda dónde se dejó;
+  - es básica o científica (la tecla de abajo a la izquierda, como en la de Apple).
+
+**El motor de la calculadora va en CuadernoCore, con tests** (CLAUDE.md §3: la lógica fuera de la interfaz).
+- Se escribe la cuenta entera, con prioridad de operaciones y paréntesis.
+- Los números se enseñan a la española, como los importes: «1.234,5».
+- Sumas, restas, productos, divisiones, porcentajes y potencias de exponente entero van en `Decimal`. Así 0,1 + 0,2 = 0,3, y el interés compuesto 1,05¹⁰ sale exacto.
+- Raíces, logaritmos y trigonometría pasan por `Double`, redondeados a 15 cifras.
+- **Concepto contable:** el % es «de calculadora».
+  - En una suma, «base + 21 %» da la base con su IVA (4.850 + 21 % = 5.868,50).
+  - En un producto, «base × 21 %» da la cuota (1.018,50).
+  - M+ va sumando, como al cuadrar el Debe de varios asientos.

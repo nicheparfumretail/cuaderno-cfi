@@ -32,3 +32,91 @@
 - **CI** (`.github/workflows/ci.yml`): Linux pasa los tests del motor; macOS compila la app; un paso comprueba que la copia del motor en la app está al día.
 - **Sin verificar:** no hay compilador de Swift en el PC (ni WSL ni Docker). Nada está «hecho» hasta que el CI salga en verde (CLAUDE.md §6) y Iulian lo pruebe en el iPad.
 - Decisiones nuevas: ADR-005, ADR-006 y ADR-007.
+
+## 25-10-2026 (tarde) — Repositorio en GitHub y primer CI en verde
+- Creado `nicheparfumretail/cuaderno-cfi` (público) desde el Chrome de Iulian; subidos `main` (esqueleto) y `paso-0/prototipo`.
+- Primer CI (run 40205942121) en verde a la primera: tests del motor en Linux, copia del motor al día y compilación de la app en macOS. Queda resuelto el riesgo de que `AppleProductTypes` no compilase con `xcodebuild`.
+- Pendiente: pull request de `paso-0/prototipo` → `main`, y la primera prueba en el iPad ([PRUEBAS](../PRUEBAS/2026-10-25_primera_prueba_iPad.md)).
+- El conector de GitHub de Claude no conecta (su servidor no admite el registro de clientes) y `gh` no está instalado: la subida se hizo con git + Git Credential Manager.
+
+## 25-10-2026 (noche) — Primera prueba en el iPad y lienzo rehecho
+- **La app arrancó en el iPad** (Working Copy → Swift Playgrounds → ▶).
+- Lo que no funcionó: la plantilla de tres columnas no se parecía al papel de clase, el reconocimiento no leyó «1000 / 572» («no lo he entendido») y el botón «Pasar a limpio» + formulario sobraban. Swift Playgrounds se colgó al cerrarlo a la fuerza.
+- Iulian mandó una foto del formato que usa siempre (apuntes de Gema): fecha en el centro sobre la raya; Debe a la izquierda «importe · nombre · (nº)»; «a» en el centro; Haber a la derecha «(nº) · nombre · importe».
+- Rehecho (ADR-008): `LectorAsientos` en el motor, con tests construidos a partir de la foto; la app lee la hoja al dejar de escribir y enseña el diario en vivo a la derecha.
+- Pendiente: decidir la rama fija `ipad` + automatización de Atajos para que Working Copy actualice solo al abrir Swift Playgrounds.
+
+## 25-10-2026 (noche, 2) — Working Copy cuelga Swift Playgrounds
+- Swift Playgrounds daba «error al mostrar los documentos» incluso tras reinstalarlo y borrar sus datos. La causa era la ubicación de Working Copy en Archivos: desactivándola, vuelve a funcionar. Se descarta Working Copy (ADR-009).
+- Nueva vía: el CI publica `CuadernoApp.zip` en `releases/download/ultima/` y un Atajo lo instala en Playgrounds.
+- Lección: cuando una app de Apple falla al listar documentos, sospechar antes de las ubicaciones de terceros en Archivos (File Providers) que de la propia app.
+
+## 25-10-2026 (noche, 3) — Primera lectura buena de su letra y rediseño de la app
+- Captura de las 19:59: Vision leyó bien `1000,00 572 | 430 1000`. Fallaba la regla del Haber sin paréntesis; ahora la cuenta es el número pegado al centro (DEBUG-LOG).
+- Iulian pidió el rediseño completo (ADR-010): inicio con «+» y menú circular, histórico, apertura, panel plegable y redimensionable, zoom, zonas ajustables, rayas como separador, fecha a mano heredable, vista En limpio y recomendaciones sin bloquear.
+- Todo en `paso-0/prototipo`; el CI publica el zip para el iPad. Pendiente: que Iulian lo pruebe.
+
+## 25-10-2026 (noche, 4) — Estudio de reconocimiento
+- Captura de las 20:49: «210,00 … (472)» leído como «0,00 HJA oportado (472)» y 819 leído como 814. Además, cualquier retoque movía toda la hoja.
+- Estudio en [ESTUDIO-RECONOCIMIENTO](ESTUDIO-RECONOCIMIENTO.md) y capa 1 hecha (ADR-011): renglones por la tinta, lectura por renglón con candidatas y memoria, y la partida doble como prueba.
+- Pendiente: que Iulian lo pruebe con su letra; decidir la capa 2 (corrección con Scribble) y la 3 (Claude por API).
+
+## 25-10-2026 (noche, 5) — Fechas y corrección a mano
+- Prueba de las 21:18: el asiento de anticipo (407 + 472 / 400) se leyó y cuadró; la fecha «01/10/25» llegó como «01/10125».
+- Hecho (ADR-012): lectura de fechas con una o dos cifras y barras leídas como 1 o 7, y capa 2 (corregir apuntes tocándolos en el panel).
+- Pendiente: que Iulian pruebe la corrección con Scribble y decidir la capa 3 (Claude por API).
+
+## 25-10-2026 (noche, 6) — Corrección en línea
+- Prueba de las 22:48: la hoja de corregir era incómoda y abría con «Debe» en un apunte del Haber. «(600)» se leyó «(608)» y «819» se leyó «89» al cerrar el paréntesis de la (472).
+- Hecho (ADR-013): corrección en línea en el panel y en En limpio, lectura por trozos y el nombre escrito como prueba del código.
+- Pendiente: que Iulian lo pruebe; decidir la capa 3 (Claude por API).
+
+## 25-10-2026 (noche, 7) — Mini ventana, arrastrar apuntes y PGC
+- Prueba de las 23:11: la edición en línea funcionaba pero era incómoda.
+- Hecho (ADR-014): mini ventana de corrección con el cuadro de cuentas del PGC, apuntes que se arrastran entre asientos y lados, y fecha editable en En limpio. CI en verde.
+- Pendiente: que Iulian lo pruebe y revise los nombres del cuadro de cuentas; decidir la capa 3 (Claude por API).
+
+## 26-10-2026 — Modo práctica, rueda, mayor con diagrama y PDF
+- Iulian probó la mini ventana y el mayor y le gustaron, igual que el histórico (rescató una hoja). Pidió:
+  - PDF y zoom en En limpio;
+  - un arrastre más sencillo;
+  - la rueda al mantener un apunte;
+  - el mayor con la tabla entera, el diagrama de asientos y el salto con resaltado;
+  - el modo práctica con el enunciado en el panel.
+- Hecho (ADR-015) en `paso-0/prototipo`. CI en verde y zip publicado para el Atajo.
+- Falló la compilación de la app: el registro del CI pide iniciar sesión en GitHub. Ahora el CI saca los errores de compilación como anotación, que se lee por la API pública (DEBUG-LOG).
+- Pendiente:
+  - que Iulian lo pruebe en el iPad ([prueba 003](../PRUEBAS/2026-10-26_practica_rueda_mayor.md)), sobre todo el arrastre y los Word del enunciado;
+  - que decida si la app resuelve el ejercicio con Claude por API.
+
+## 26-10-2026 (2) — Enunciado en blanco, PDF como En limpio y mayor en T
+- Prueba de Iulian:
+  - la cuenta del centro de la rueda se mezclaba con el texto de detrás;
+  - quería todos los importes con dos decimales;
+  - en la práctica no se veía nada al pegar una captura, subir una foto o un PDF;
+  - el PDF exportado no tenía el aspecto de En limpio, tardaba sin avisar y no dejaba compartir con Freenotes;
+  - el mayor tenía que abrirse en T y decir el nombre de las contrapartidas.
+- Hecho (ADR-016). CI en verde a la primera y zip publicado.
+- Pendiente: que Iulian lo pruebe ([prueba 003](../PRUEBAS/2026-10-26_practica_rueda_mayor.md), parte b) y decida si quiere la resolución con Claude por API.
+
+## 26-10-2026 (3) — Páginas del enunciado sueltas y salida solo con la flecha
+- Pedido de Iulian:
+  - poder mover, redimensionar y quitar lo pegado en el enunciado;
+  - que no se salga de la hoja sin querer al redimensionar el panel.
+- Hecho (ADR-017). CI en verde a la primera y zip publicado.
+- Pendiente:
+  - que lo pruebe ([prueba 004](../PRUEBAS/2026-10-26_enunciado_editable.md));
+  - la [prueba 003b](../PRUEBAS/2026-10-26_practica_rueda_mayor.md);
+  - que decida si quiere la resolución con Claude por API.
+
+## 27-10-2026 — Panel de práctica partido en dos y calculadora flotante
+- Pedido de Iulian:
+  - minimizar el enunciado;
+  - partir su panel con una hoja de cálculos a mano (intercambiable arriba/abajo, con acciones rápidas);
+  - una calculadora científica como la de Apple, flotante y movible.
+- La de Apple no puede flotar encima de la app (iPadOS no lo deja): se hace una propia con su aspecto, con el motor en CuadernoCore y sus tests.
+- Hecho (ADR-018).
+- Pendiente:
+  - que Iulian lo pruebe ([prueba 005](../PRUEBAS/2026-10-27_calculos_y_calculadora.md));
+  - las pruebas 003b y 004.
+- La captura que mandó era de la versión anterior a ADR-017: tiene que ejecutar el Atajo.
