@@ -111,3 +111,21 @@ Una nota por módulo cuando exista. Por ahora, el plan:
 | `CuadernoApp.swiftpm/Practica/LienzoNotasView.swift` | Coloca las páginas según su sitio (o donde está el dedo) y en su orden; capa del marco encima del lienzo |
 | `CuadernoApp.swiftpm/App/Archivo.swift` | `PaginaEnunciado` guarda `x`, `y` y `anchoMostrado` (opcionales: las hojas de antes se siguen abriendo) |
 | `CuadernoApp.swiftpm/Hoja/HojaView.swift` | Flecha «Inicio» propia; `SinGestoAtras` apaga los gestos de volver deslizando |
+
+## Actualización 27-10-2026 — ADR-018
+
+| Archivo | Qué hace |
+|---|---|
+| `Sources/CuadernoCore/Calculadora.swift` | Nuevo: la calculadora, tecla a tecla (escribir, operadores, funciones, memoria, borrar) |
+| `Sources/CuadernoCore/Calculadora+Cuenta.swift` | Nuevo: lee lo escrito con la prioridad de siempre y lo calcula (Decimal; Double solo en las funciones científicas) |
+| `Sources/CuadernoCore/Calculadora+Texto.swift` | Nuevo: los números a la española y en notación científica |
+| `Tests/CuadernoCoreTests/CalculadoraTests.swift` | Nuevo: IVA con %, interés compuesto, decimales exactos, funciones, memoria |
+| `CuadernoApp.swiftpm/Calculadora/CapaCalculadora.swift` | Nuevo: la ventana flotante (arrastrar, minimizar, recordar el sitio) |
+| `CuadernoApp.swiftpm/Calculadora/TecladoCalculadora.swift` | Nuevo: pantalla y teclas como la de Apple, básica y científica |
+| `CuadernoApp.swiftpm/Practica/PanelPracticaView.swift` | Nuevo: el panel de la práctica partido en Enunciado y Cálculos |
+| `CuadernoApp.swiftpm/Practica/CalculosView.swift` | Nuevo: la mitad de cálculos con su barra de acciones rápidas |
+| `CuadernoApp.swiftpm/Practica/LienzoCalculosView.swift` | Nuevo: el lienzo de cálculos sobre papel cuadriculado |
+| `CuadernoApp.swiftpm/Practica/EnunciadoView.swift` | Se minimiza a su barra |
+| `CuadernoApp.swiftpm/App/Archivo.swift` | `Hoja.calculos` (opcional: las hojas de antes se siguen abriendo) |
+| `CuadernoApp.swiftpm/Hoja/HojaView.swift` | Botón ± de la calculadora; el panel de la práctica es `PanelPracticaView` |
+| `CuadernoApp.swiftpm/Inicio/InicioView.swift` | La calculadora flotante, encima de todas las pantallas |

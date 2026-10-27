@@ -108,3 +108,15 @@
   - que lo pruebe ([prueba 004](../PRUEBAS/2026-10-26_enunciado_editable.md));
   - la [prueba 003b](../PRUEBAS/2026-10-26_practica_rueda_mayor.md);
   - que decida si quiere la resolución con Claude por API.
+
+## 27-10-2026 — Panel de práctica partido en dos y calculadora flotante
+- Pedido de Iulian:
+  - minimizar el enunciado;
+  - partir su panel con una hoja de cálculos a mano (intercambiable arriba/abajo, con acciones rápidas);
+  - una calculadora científica como la de Apple, flotante y movible.
+- La de Apple no puede flotar encima de la app (iPadOS no lo deja): se hace una propia con su aspecto, con el motor en CuadernoCore y sus tests.
+- Hecho (ADR-018).
+- Pendiente:
+  - que Iulian lo pruebe ([prueba 005](../PRUEBAS/2026-10-27_calculos_y_calculadora.md));
+  - las pruebas 003b y 004.
+- La captura que mandó era de la versión anterior a ADR-017: tiene que ejecutar el Atajo.

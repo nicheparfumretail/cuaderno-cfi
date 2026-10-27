@@ -120,3 +120,40 @@
 - **Lo escrito encima va con la página:** los trazos cuyo centro cae dentro de la página se mueven y se escalan con ella. Mientras dura el arrastre viajan como imagen y al soltar vuelven al lienzo. Al quitar una página, lo escrito encima se borra con ella; por eso «Quitar» pide confirmación.
 - **Quitar ya no sube lo de debajo**, tampoco al quitar un adjunto entero desde el clip. Con las páginas sueltas, cerrar el hueco movería cosas que Iulian ha colocado a mano. Esto sustituye lo que decía ADR-015.
 - **De una hoja solo se sale con la flecha «Inicio».** Deslizar hacia atrás está apagado, tanto desde el borde como el gesto de iPadOS 26 desde cualquier punto. Saltaba al arrastrar la separación del panel. Al volver al inicio, los gestos se encienden otra vez.
+
+## ADR-018 · Panel de práctica partido en dos y calculadora flotante (27-10-2026)
+Pedido por Iulian:
+- poder minimizar el enunciado;
+- una hoja para hacer cuentas a mano;
+- una calculadora científica como la de Apple que flote sin tapar el lienzo.
+
+**Panel de la práctica partido en dos: Enunciado y Cálculos.**
+- Cada mitad se minimiza a su barra y la otra ocupa todo el panel; siempre queda una abierta.
+- Con ⇅ se cambia cuál va arriba. La separación se arrastra para repartir el alto.
+- Cómo se deja se recuerda para la próxima práctica (preferencias del iPad, no de la hoja).
+
+**La hoja de Cálculos** es un lienzo de PencilKit sobre papel cuadriculado, como el de Notas.
+- Sirve para las cuentas que no son asientos: cuotas de IVA, prorratas, amortizaciones.
+- Se guarda con la hoja (`Hoja.calculos`) pero **no se lee**: no son asientos y no cuentan en la Solución.
+- Acciones rápidas en su barra: deshacer, rehacer, borrar todo, cambiar de mitad y minimizar.
+- «Borrar todo» se puede deshacer.
+- Deshacer usa el deshacer del sistema, el mismo de la paleta del Pencil. Por eso deshace lo último escrito, sea en el lienzo que sea.
+
+**Calculadora: la de Apple, no; una propia con su aspecto.**
+- iPadOS no deja que otra app se quede flotando encima de esta (solo los vídeos en imagen dentro de imagen).
+- Tampoco hay forma pública de meter la Calculadora dentro de una app.
+- La propia va en la raíz de la app, por encima de todas las pantallas:
+  - se abre con el botón ± de la barra de la hoja;
+  - se mueve arrastrando su barra y se minimiza a una píldora con el número de la pantalla;
+  - recuerda dónde se dejó;
+  - es básica o científica (la tecla de abajo a la izquierda, como en la de Apple).
+
+**El motor de la calculadora va en CuadernoCore, con tests** (CLAUDE.md §3: la lógica fuera de la interfaz).
+- Se escribe la cuenta entera, con prioridad de operaciones y paréntesis.
+- Los números se enseñan a la española, como los importes: «1.234,5».
+- Sumas, restas, productos, divisiones, porcentajes y potencias de exponente entero van en `Decimal`. Así 0,1 + 0,2 = 0,3, y el interés compuesto 1,05¹⁰ sale exacto.
+- Raíces, logaritmos y trigonometría pasan por `Double`, redondeados a 15 cifras.
+- **Concepto contable:** el % es «de calculadora».
+  - En una suma, «base + 21 %» da la base con su IVA (4.850 + 21 % = 5.868,50).
+  - En un producto, «base × 21 %» da la cuota (1.018,50).
+  - M+ va sumando, como al cuadrar el Debe de varios asientos.
